@@ -9,7 +9,12 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-pfe-jumia-2025-secret
 # Debug : False en production
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*']  # Railway gère les hosts automatiquement
+ALLOWED_HOSTS = ['*']
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://jumia-analytics-pfe-production.up.railway.app',
+    'https://*.up.railway.app',
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
