@@ -1124,3 +1124,88 @@ def api_dashboard_dynamique(request):
             continue
 
     return Response({'widgets': dashboard_data})
+
+from django.http import JsonResponse
+from django.contrib.auth import get_user_model
+from django.core.management import call_command
+from django.db import connection
+import traceback
+
+def setup_railway(request):
+    """Endpoint de setup automatique pour Railway"""
+    results = []
+    
+    try:
+        results.append("📊 Étape 1 : Vérification de la base de données...")
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+            results.append("   ✅ Connexion base de données OK")
+        except Exception as e:
+            results.append(f"   ❌ Erreur base de données : {e}")
+            return JsonResponse({'status': 'error', 'details': results})
+        
+        results.append("📊 Étape 2 : Application des migrations...")
+        try:
+            call_command('migrate', '--noinput')
+            results.append("   ✅ Migrations appliquées")
+        except Exception as e:
+            results.append(f"   ❌ Erreur migrations : {e}")
+            return JsonResponse({'status': 'error', 'details': results})
+        
+        results.append("📊 Étape 3 : Création du superutilisateur...")
+        try:
+            User = get_user_model()
+            if not User.objects.filter(username='admin').exists():
+                User.objects.create_superuser('admin', '', 'admin123')
+                results.append("   ✅ Superutilisateur 'admin' créé")
+                results.append("   🔑 Password : admin123")
+            else:
+                user = User.objects.get(username='admin')
+                user.set_password('admin123')
+                user.save()
+                results.append("   ℹ️ Superutilisateur existe déjà")
+                results.append("   🔄 Mot de passe réinitialisé à 'admin123'")
+        except Exception as e:
+            results.append(f"   ❌ Erreur création superutilisateur : {e}")
+            return JsonResponse({'status': 'error', 'details': results})
+        
+        results.append("📊 Étape 4 : Collecte des fichiers statiques...")
+        try:
+            call_command('collectstatic', '--noinput', '--clear')
+            results.append("   ✅ Fichiers statiques collectés")
+        except Exception as e:
+            results.append(f"   ⚠️ Avertissement fichiers statiques : {e}")
+        
+        results.append("")
+        results.append("=" * 50)
+        results.append("✅ SETUP TERMINÉ AVEC SUCCÈS")
+        results.append("=" * 50)
+        results.append("")
+        results.append("📍 URLs disponibles :")
+        results.append("   🏠 Dashboard    : /")
+        results.append("   ⚙️ Admin Django : /admin/")
+        results.append("   📊 Configurator : /configurator/")
+        results.append("")
+        results.append("🔑 Identifiants :")
+        results.append("   Username : admin")
+        results.append("   Password : admin123")
+        
+        return JsonResponse({
+            'status': 'success',
+            'details': results,
+            'urls': {
+                'dashboard': '/',
+                'admin': '/admin/',
+                'configurator': '/configurator/'
+            },
+            'credentials': {
+                'username': 'admin',
+                'password': 'admin123'
+            }
+        })
+        
+    except Exception as e:
+        results.append(f"❌ Erreur inattendue : {e}")
+        results.append(traceback.format_exc())
+        return JsonResponse({'status': 'error', 'details': results})
