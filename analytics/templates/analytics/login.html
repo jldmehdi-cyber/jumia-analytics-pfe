@@ -1,0 +1,234 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Jumia Analytics</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent: #f97316;
+            --accent-hover: #ea580c;
+            --border: #475569;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .login-logo h1 {
+            color: var(--accent);
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .login-logo p {
+            color: var(--text-secondary);
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 15px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-group input::placeholder {
+            color: #64748b;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-login:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .error-message.show { display: block; }
+
+        .login-footer {
+            text-align: center;
+            margin-top: 24px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .login-footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .login-footer a:hover { text-decoration: underline; }
+
+        .loading {
+            display: inline-block;
+            width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-logo">
+            <h1><i class="fas fa-chart-line"></i> Jumia Analytics</h1>
+            <p>Dashboard analytique intelligent</p>
+        </div>
+
+        <div class="error-message" id="error-msg">
+            <i class="fas fa-exclamation-circle"></i> <span id="error-text"></span>
+        </div>
+
+        <form id="login-form" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="username">Nom d'utilisateur</label>
+                <input type="text" id="username" name="username" placeholder="admin" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Mot de passe</label>
+                <input type="password" id="password" name="password" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" class="btn-login" id="btn-login">
+                <span>Se connecter</span>
+            </button>
+        </form>
+
+        <div class="login-footer">
+            <p>PFE Big Data Analytics — 2025</p>
+            <p style="margin-top: 8px; font-size: 12px;">Django 5.2 LTS • PostgreSQL • Scikit-learn</p>
+        </div>
+    </div>
+
+    <script>
+        async function handleLogin(e) {
+            e.preventDefault();
+
+            const btn = document.getElementById('btn-login');
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+            const errorText = document.getElementById('error-text');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Connexion...';
+            errorMsg.classList.remove('show');
+
+            try {
+                const res = await fetch('/api/auth/login/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.access) {
+                    localStorage.setItem('jwt_token', data.access);
+                    localStorage.setItem('refresh_token', data.refresh);
+                    window.location.href = '/';
+                } else {
+                    errorText.textContent = data.error || 'Identifiants invalides';
+                    errorMsg.classList.add('show');
+                }
+            } catch (err) {
+                errorText.textContent = 'Erreur de connexion au serveur';
+                errorMsg.classList.add('show');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Se connecter</span>';
+            }
+        }
+    </script>
+</body>
+</html>

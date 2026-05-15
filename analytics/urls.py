@@ -1,0 +1,64 @@
+"""
+URL configuration for analytics app.
+"""
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    # Frontend
+    path('', views.index, name='index'),
+    path('login/', views.login_page, name='login'),
+    path('configurator/', views.configurator, name='configurator'),
+
+    # Auth API
+    path('api/auth/login/', views.api_login, name='api_login'),
+    path('api/auth/token/', views.CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+
+    # Health
+    path('api/health/', views.health_check, name='health_check'),
+
+    # KPIs
+    path('api/kpis/', views.api_kpis, name='api_kpis'),
+    path('api/tendances/', views.api_tendances, name='api_tendances'),
+    path('api/rfm/', views.api_rfm, name='api_rfm'),
+    path('api/par-region/', views.api_par_region, name='api_par_region'),
+    path('api/par-article/', views.api_par_article, name='api_par_article'),
+
+    # Données comportementales
+    path('api/funnel/', views.api_funnel, name='api_funnel'),
+    path('api/produits-fantomes/', views.api_produits_fantomes, name='api_produits_fantomes'),
+    path('api/produits-caches/', views.api_produits_caches, name='api_produits_caches'),
+    path('api/points-friction/', views.api_points_friction, name='api_points_friction'),
+    path('api/segmentation-comportementale/', views.api_segmentation_comportementale, name='api_segmentation_comportementale'),
+
+    # Chatbot
+    path('api/chatbot/', views.api_chatbot, name='api_chatbot'),
+    path('api/chatbot/history/', views.api_chatbot_history, name='api_chatbot_history'),
+
+    # Prédictions & Alertes
+    path('api/previsions/', views.api_previsions, name='api_previsions'),
+    path('api/alertes/', views.api_alertes, name='api_alertes'),
+
+    # Exports
+    path('api/export/excel/', views.api_export_excel, name='api_export_excel'),
+    path('api/export/csv/', views.api_export_csv, name='api_export_csv'),
+
+    # Import
+    path('api/import/', views.api_import_excel, name='api_import_excel'),
+
+    # Configuration KPIs (Nouveau)
+    path('api/indicateurs/', views.api_indicateurs, name='api_indicateurs'),
+    path('api/indicateurs/<int:pk>/', views.api_indicateur_detail, name='api_indicateur_detail'),
+    path('api/indicateurs/<int:pk>/calculer/', views.api_calculer_kpi, name='api_calculer_kpi'),
+    path('api/indicateurs/<int:pk>/par-dimension/', views.api_kpi_par_dimension, name='api_kpi_par_dimension'),
+
+    # Configuration Projet & Canevas
+    path('api/configurations/', views.api_configurations, name='api_configurations'),
+    path('api/configurations/<int:pk>/', views.api_configuration_detail, name='api_configuration_detail'),
+    path('api/configurations/<int:pk>/canevas/', views.api_generer_canevas, name='api_generer_canevas'),
+    path('api/configurations/<int:pk>/importer/', views.api_importer_canevas, name='api_importer_canevas'),
+
+    # Widgets & Dashboard dynamique
+    path('api/widgets/', views.api_widgets, name='api_widgets'),
+    path('api/dashboard-dynamique/', views.api_dashboard_dynamique, name='api_dashboard_dynamique'),
+]

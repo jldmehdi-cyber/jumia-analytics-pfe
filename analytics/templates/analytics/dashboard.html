@@ -1,0 +1,958 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jumia Analytics - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent: #f97316;
+            --accent-hover: #ea580c;
+            --success: #22c55e;
+            --warning: #eab308;
+            --danger: #ef4444;
+            --border: #475569;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0; top: 0;
+            width: 260px; height: 100vh;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            padding: 20px 0;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .logo {
+            padding: 0 24px 24px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 16px;
+        }
+
+        .logo h1 {
+            font-size: 22px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item {
+            padding: 12px 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: rgba(249, 115, 22, 0.1);
+            color: var(--accent);
+            border-left-color: var(--accent);
+        }
+
+        .nav-item i { width: 20px; text-align: center; }
+
+        .main-content {
+            margin-left: 260px;
+            padding: 24px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .filters {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        select, button {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button {
+            background: var(--accent);
+            border: none;
+            font-weight: 600;
+        }
+
+        button:hover { background: var(--accent-hover); }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .kpi-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 3px;
+        }
+
+        .kpi-card.ca::before { background: var(--accent); }
+        .kpi-card.marge::before { background: var(--success); }
+        .kpi-card.cmd::before { background: var(--warning); }
+        .kpi-client::before { background: #8b5cf6; }
+
+        .kpi-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .kpi-trend {
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .kpi-trend.up { color: var(--success); }
+        .kpi-trend.down { color: var(--danger); }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .chart-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .chart-card h3 {
+            font-size: 16px;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            margin: 24px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .table-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--bg-card);
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        tr:hover { background: rgba(249, 115, 22, 0.05); }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-champions { background: rgba(34, 197, 94, 0.2); color: var(--success); }
+        .badge-fideles { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        .badge-perdus { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        .badge-potentiels { background: rgba(234, 179, 8, 0.2); color: var(--warning); }
+
+        /* Chatbot */
+        .chatbot-widget {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 380px;
+            max-height: 600px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            z-index: 1000;
+            transition: transform 0.3s, opacity 0.3s;
+        }
+
+        .chatbot-widget.hidden {
+            transform: translateY(20px);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .chatbot-header {
+            padding: 16px 20px;
+            background: var(--accent);
+            border-radius: 16px 16px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chatbot-header h4 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+        }
+
+        .chatbot-close {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+        }
+
+        .chatbot-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            max-height: 400px;
+        }
+
+        .message {
+            margin-bottom: 12px;
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .message.user {
+            background: var(--accent);
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.bot {
+            background: var(--bg-card);
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.bot .intent-tag {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .chatbot-input {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+        }
+
+        .chatbot-input input {
+            flex: 1;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .chatbot-input button {
+            padding: 10px 16px;
+            border-radius: 8px;
+        }
+
+        .chatbot-toggle {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            background: var(--accent);
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(249, 115, 22, 0.4);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chatbot-toggle:hover { transform: scale(1.1); }
+
+        .loading {
+            display: inline-block;
+            width: 16px; height: 16px;
+            border: 2px solid var(--text-secondary);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .alert-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-box i { color: var(--danger); }
+
+        .export-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .export-buttons button {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        .export-buttons button:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; height: auto; position: relative; }
+            .main-content { margin-left: 0; }
+            .chart-grid { grid-template-columns: 1fr; }
+            .chatbot-widget { width: calc(100% - 32px); right: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="logo">
+            <h1><i class="fas fa-chart-line"></i> Jumia Analytics</h1>
+        </div>
+
+        <div class="nav-item active" onclick="showTab('dashboard')">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </div>
+        <div class="nav-item" onclick="showTab('comportemental')">
+            <i class="fas fa-mouse-pointer"></i> Comportemental
+        </div>
+        <div class="nav-item" onclick="showTab('rfm')">
+            <i class="fas fa-users"></i> Segmentation RFM
+        </div>
+        <div class="nav-item" onclick="showTab('previsions')">
+            <i class="fas fa-chart-area"></i> Prévisions
+        </div>
+        <div class="nav-item" onclick="showTab('alertes')">
+            <i class="fas fa-bell"></i> Alertes
+        </div>
+        <div class="nav-item" onclick="logout()">
+            <i class="fas fa-sign-out-alt"></i> Déconnexion
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <h2 id="page-title">Tableau de Bord</h2>
+            <div style="display: flex; gap: 12px; align-items: center;">
+            <button class="btn btn-outline" onclick="window.location.href='/configurator/'" style="background: transparent; border: 1px solid var(--accent); color: var(--accent);">
+                <i class="fas fa-cogs"></i> Configurer mes KPIs
+            </button>
+            <div class="filters">
+                <select id="region-filter" onchange="loadDashboard()">
+                    <option value="all">Toutes les régions</option>
+                </select>
+                <select id="periode-filter" onchange="loadDashboard()">
+                    <option value="all">Toute la période</option>
+                    <option value="mois">Ce mois</option>
+                    <option value="trimestre">Ce trimestre</option>
+                    <option value="annee">Cette année</option>
+                </select>
+                <button onclick="loadDashboard()"><i class="fas fa-sync"></i> Actualiser</button>
+            </div>
+        </div>
+
+        <!-- Export Buttons -->
+        <div class="export-buttons">
+            <button onclick="exportData('excel')"><i class="fas fa-file-excel"></i> Excel</button>
+            <button onclick="exportData('csv')"><i class="fas fa-file-csv"></i> CSV</button>
+        </div>
+
+        <!-- Tab: Dashboard -->
+        <div id="tab-dashboard" class="tab-content active">
+            <!-- KPI Cards -->
+            <div class="kpi-grid">
+                <div class="kpi-card ca">
+                    <div class="kpi-label">Chiffre d'Affaires</div>
+                    <div class="kpi-value" id="kpi-ca">0 DZD</div>
+                    <div class="kpi-trend" id="kpi-ca-trend"><i class="fas fa-arrow-up"></i> 0%</div>
+                </div>
+                <div class="kpi-card marge">
+                    <div class="kpi-label">Marge Totale</div>
+                    <div class="kpi-value" id="kpi-marge">0 DZD</div>
+                    <div class="kpi-trend" id="kpi-marge-pct">0% de marge</div>
+                </div>
+                <div class="kpi-card cmd">
+                    <div class="kpi-label">Commandes</div>
+                    <div class="kpi-value" id="kpi-cmd">0</div>
+                    <div class="kpi-trend" id="kpi-panier">Panier moyen: 0 DZD</div>
+                </div>
+                <div class="kpi-card client">
+                    <div class="kpi-label">Clients Actifs</div>
+                    <div class="kpi-value" id="kpi-clients">0</div>
+                    <div class="kpi-trend" id="kpi-clients-trend">Unique</div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-line"></i> Évolution du CA</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-tendances"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-bar"></i> CA par Région</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-regions"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-pie"></i> Répartition par Catégorie</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-categories"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3><i class="fas fa-trophy"></i> Top Articles</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-articles"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Comportemental -->
+        <div id="tab-comportemental" class="tab-content">
+            <div class="section-title"><i class="fas fa-filter"></i> Funnel de Conversion</div>
+            <div class="chart-card">
+                <div class="chart-container">
+                    <canvas id="chart-funnel"></canvas>
+                </div>
+            </div>
+
+            <div class="section-title"><i class="fas fa-ghost"></i> Produits Fantômes</div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>Code</th><th>Article</th><th>Vues</th><th>Achats</th><th>Ratio</th><th>Prix</th></tr>
+                    </thead>
+                    <tbody id="tbody-fantomes"></tbody>
+                </table>
+            </div>
+
+            <div class="section-title"><i class="fas fa-gem"></i> Produits Cachés</div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>Code</th><th>Article</th><th>Vues</th><th>Achats</th><th>Ratio</th><th>CA</th></tr>
+                    </thead>
+                    <tbody id="tbody-caches"></tbody>
+                </table>
+            </div>
+
+            <div class="section-title"><i class="fas fa-exclamation-triangle"></i> Points de Friction</div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>Page</th><th>Abandons</th></tr>
+                    </thead>
+                    <tbody id="tbody-friction"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab: RFM -->
+        <div id="tab-rfm" class="tab-content">
+            <div class="section-title"><i class="fas fa-users"></i> Segmentation RFM</div>
+            <div class="chart-card">
+                <div class="chart-container">
+                    <canvas id="chart-rfm"></canvas>
+                </div>
+            </div>
+
+            <div class="section-title"><i class="fas fa-crown"></i> Top Clients</div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>Client</th><th>Segment</th><th>Récence</th><th>Fréquence</th><th>Montant</th><th>Score</th></tr>
+                    </thead>
+                    <tbody id="tbody-rfm"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab: Prévisions -->
+        <div id="tab-previsions" class="tab-content">
+            <div class="section-title"><i class="fas fa-chart-area"></i> Prévisions de Ventes (ML)</div>
+            <div class="chart-card">
+                <div class="chart-container" style="height: 400px;">
+                    <canvas id="chart-previsions"></canvas>
+                </div>
+            </div>
+            <div id="previsions-stats" style="margin-top: 16px; color: var(--text-secondary);"></div>
+        </div>
+
+        <!-- Tab: Alertes -->
+        <div id="tab-alertes" class="tab-content">
+            <div class="section-title"><i class="fas fa-bell"></i> Alertes & Anomalies</div>
+            <div id="alertes-container"></div>
+        </div>
+    </main>
+
+    <!-- Chatbot -->
+    <button class="chatbot-toggle" onclick="toggleChatbot()">
+        <i class="fas fa-robot"></i>
+    </button>
+
+    <div class="chatbot-widget hidden" id="chatbot">
+        <div class="chatbot-header">
+            <h4><i class="fas fa-robot"></i> Jumia Analytics Bot</h4>
+            <button class="chatbot-close" onclick="toggleChatbot()">×</button>
+        </div>
+        <div class="chatbot-messages" id="chatbot-messages">
+            <div class="message bot">
+                Bonjour ! Je suis votre assistant analytique. Posez-moi des questions sur :
+                <br>• KPIs et chiffres clés
+                <br>• Comparaisons et tendances
+                <br>• Anomalies et alertes
+                <br>• Produits et catégories
+            </div>
+        </div>
+        <div class="chatbot-input">
+            <input type="text" id="chatbot-input" placeholder="Posez votre question..." 
+                   onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <script>
+        // ─── Configuration ───
+        const API_BASE = '/api';
+        let authToken = localStorage.getItem('jwt_token');
+        let charts = {};
+
+        // ─── Auth ───
+        if (!authToken) {
+            window.location.href = '/login/';
+        }
+
+        function logout() {
+            localStorage.removeItem('jwt_token');
+            window.location.href = '/login/';
+        }
+
+        async function apiFetch(url, options = {}) {
+            const res = await fetch(url, {
+                ...options,
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                }
+            });
+            if (res.status === 401) {
+                logout();
+                return null;
+            }
+            return res.json();
+        }
+
+        // ─── Navigation ───
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            event.target.closest('.nav-item').classList.add('active');
+
+            const titles = {
+                'dashboard': 'Tableau de Bord',
+                'comportemental': 'Analyse Comportementale',
+                'rfm': 'Segmentation RFM',
+                'previsions': 'Prévisions ML',
+                'alertes': 'Alertes & Anomalies'
+            };
+            document.getElementById('page-title').textContent = titles[tabId];
+
+            if (tabId === 'comportemental') loadComportemental();
+            if (tabId === 'rfm') loadRFM();
+            if (tabId === 'previsions') loadPrevisions();
+            if (tabId === 'alertes') loadAlertes();
+        }
+
+        // ─── Dashboard ───
+        async function loadDashboard() {
+            const region = document.getElementById('region-filter').value;
+            const periode = document.getElementById('periode-filter').value;
+
+            // KPIs
+            const kpis = await apiFetch(`${API_BASE}/kpis/?region=${region}&periode=${periode}`);
+            if (kpis) {
+                document.getElementById('kpi-ca').textContent = formatCurrency(kpis.chiffre_affaires);
+                document.getElementById('kpi-marge').textContent = formatCurrency(kpis.marge_totale);
+                document.getElementById('kpi-marge-pct').textContent = `${kpis.marge_pourcentage}% de marge`;
+                document.getElementById('kpi-cmd').textContent = kpis.nombre_commandes.toLocaleString();
+                document.getElementById('kpi-panier').textContent = `Panier moyen: ${formatCurrency(kpis.panier_moyen)}`;
+                document.getElementById('kpi-clients').textContent = kpis.nombre_clients.toLocaleString();
+
+                const trendEl = document.getElementById('kpi-ca-trend');
+                trendEl.innerHTML = kpis.croissance >= 0 
+                    ? `<i class="fas fa-arrow-up"></i> +${kpis.croissance}%`
+                    : `<i class="fas fa-arrow-down"></i> ${kpis.croissance}%`;
+                trendEl.className = `kpi-trend ${kpis.croissance >= 0 ? 'up' : 'down'}`;
+            }
+
+            // Tendances
+            const tendances = await apiFetch(`${API_BASE}/tendances/?region=${region}`);
+            if (tendances) updateChart('chart-tendances', 'line', tendances.labels, [
+                { label: 'CA', data: tendances.ca, color: '#f97316' },
+                { label: 'Marge', data: tendances.marge, color: '#22c55e' }
+            ]);
+
+            // Régions
+            const regions = await apiFetch(`${API_BASE}/par-region/`);
+            if (regions) {
+                updateChart('chart-regions', 'bar', 
+                    regions.regions.map(r => r.region),
+                    [{ label: 'CA', data: regions.regions.map(r => r.ca), color: '#3b82f6' }]
+                );
+            }
+
+            // Articles
+            const articles = await apiFetch(`${API_BASE}/par-article/?top=10`);
+            if (articles) {
+                updateChart('chart-articles', 'bar',
+                    articles.articles.map(a => a.nom.substring(0, 20)),
+                    [{ label: 'CA', data: articles.articles.map(a => a.ca), color: '#8b5cf6' }]
+                );
+            }
+
+            // Catégories (depuis articles)
+            // Note: endpoint catégories à ajouter si besoin
+        }
+
+        // ─── Comportemental ───
+        async function loadComportemental() {
+            // Funnel
+            const funnel = await apiFetch(`${API_BASE}/funnel/`);
+            if (funnel) {
+                updateChart('chart-funnel', 'bar',
+                    funnel.funnel.map(f => f.etape),
+                    [{ label: 'Nombre', data: funnel.funnel.map(f => f.count), color: '#f97316' }]
+                );
+            }
+
+            // Produits fantômes
+            const fantomes = await apiFetch(`${API_BASE}/produits-fantomes/`);
+            if (fantomes) {
+                document.getElementById('tbody-fantomes').innerHTML = fantomes.produits_fantomes.map(p => `
+                    <tr><td>${p.code}</td><td>${p.nom}</td><td>${p.vues}</td>
+                    <td>${p.achats}</td><td>${p.ratio}:1</td><td>${formatCurrency(p.prix)}</td></tr>
+                `).join('');
+            }
+
+            // Produits cachés
+            const caches = await apiFetch(`${API_BASE}/produits-caches/`);
+            if (caches) {
+                document.getElementById('tbody-caches').innerHTML = caches.produits_caches.map(p => `
+                    <tr><td>${p.code}</td><td>${p.nom}</td><td>${p.vues}</td>
+                    <td>${p.achats}</td><td>${p.ratio}:1</td><td>${formatCurrency(p.ca)}</td></tr>
+                `).join('');
+            }
+
+            // Points de friction
+            const friction = await apiFetch(`${API_BASE}/points-friction/`);
+            if (friction) {
+                document.getElementById('tbody-friction').innerHTML = friction.points_friction.map(p => `
+                    <tr><td>${p.page}</td><td><span style="color: var(--danger); font-weight: 600;">${p.abandons}</span></td></tr>
+                `).join('');
+            }
+        }
+
+        // ─── RFM ───
+        async function loadRFM() {
+            const rfm = await apiFetch(`${API_BASE}/rfm/`);
+            if (rfm) {
+                updateChart('chart-rfm', 'doughnut',
+                    rfm.segments.map(s => s.segment),
+                    [{ data: rfm.segments.map(s => s.count), 
+                       color: ['#22c55e', '#3b82f6', '#eab308', '#8b5cf6', '#ef4444', '#64748b'] }]
+                );
+
+                document.getElementById('tbody-rfm').innerHTML = rfm.top_clients.map(c => `
+                    <tr>
+                        <td>${c.nom_client}</td>
+                        <td><span class="badge badge-${c.segment_rfm}">${c.segment_rfm}</span></td>
+                        <td>${c.recence}j</td>
+                        <td>${c.frequence}</td>
+                        <td>${formatCurrency(c.montant)}</td>
+                        <td>${c.score_rfm}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        // ─── Prévisions ───
+        async function loadPrevisions() {
+            const prev = await apiFetch(`${API_BASE}/previsions/`);
+            if (prev && !prev.error) {
+                const labels = [...prev.historique.labels, ...prev.previsions.map(p => p.mois)];
+                const histData = [...prev.historique.ca, ...Array(prev.previsions.length).fill(null)];
+                const predData = [...Array(prev.historique.ca.length).fill(null), ...prev.previsions.map(p => p.prediction)];
+
+                updateChart('chart-previsions', 'line', labels, [
+                    { label: 'Historique', data: histData, color: '#3b82f6' },
+                    { label: 'Prévision', data: predData, color: '#f97316', borderDash: [5, 5] }
+                ]);
+
+                document.getElementById('previsions-stats').innerHTML = `
+                    <i class="fas fa-info-circle"></i> R² Score: ${prev.r2_score} | 
+                    Prévisions sur 3 mois basées sur régression polynomiale
+                `;
+            }
+        }
+
+        // ─── Alertes ───
+        async function loadAlertes() {
+            const alertes = await apiFetch(`${API_BASE}/alertes/`);
+            const container = document.getElementById('alertes-container');
+
+            if (alertes && alertes.alertes.length > 0) {
+                container.innerHTML = alertes.alertes.map(a => `
+                    <div class="alert-box">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>
+                            <strong>${a.type}</strong><br>
+                            ${a.message}<br>
+                            <small>CA: ${formatCurrency(a.ca)} | Commandes: ${a.nb_commandes}</small>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<div style="color: var(--success);"><i class="fas fa-check-circle"></i> Aucune anomalie détectée</div>';
+            }
+        }
+
+        // ─── Chatbot ───
+        function toggleChatbot() {
+            document.getElementById('chatbot').classList.toggle('hidden');
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chatbot-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const messagesDiv = document.getElementById('chatbot-messages');
+            messagesDiv.innerHTML += `<div class="message user">${message}</div>`;
+            input.value = '';
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            // Loading
+            const loadingId = 'loading-' + Date.now();
+            messagesDiv.innerHTML += `<div class="message bot" id="${loadingId}"><span class="loading"></span> Analyse en cours...</div>`;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            const res = await apiFetch(`${API_BASE}/chatbot/`, {
+                method: 'POST',
+                body: JSON.stringify({ message, session_id: 'web-' + Date.now() })
+            });
+
+            document.getElementById(loadingId).remove();
+
+            if (res) {
+                messagesDiv.innerHTML += `
+                    <div class="message bot">
+                        ${res.response.replace(/\n/g, '<br>')}
+                        <div class="intent-tag">Intent: ${res.intent} (${(res.confidence * 100).toFixed(1)}%)</div>
+                    </div>
+                `;
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+        }
+
+        // ─── Export ───
+        function exportData(format) {
+            const url = `${API_BASE}/export/${format}/`;
+            window.open(url, '_blank');
+        }
+
+        // ─── Chart Helper ───
+        function updateChart(canvasId, type, labels, datasets) {
+            if (charts[canvasId]) {
+                charts[canvasId].destroy();
+            }
+
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const isDark = true;
+
+            const chartDatasets = datasets.map((ds, i) => ({
+                label: ds.label || '',
+                data: ds.data,
+                backgroundColor: type === 'line' ? ds.color + '20' : ds.color,
+                borderColor: ds.color,
+                borderWidth: 2,
+                fill: type === 'line',
+                tension: 0.4
+            }));
+
+            charts[canvasId] = new Chart(ctx, {
+                type: type,
+                data: { labels, datasets: chartDatasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#94a3b8', font: { size: 12 } }
+                        }
+                    },
+                    scales: type !== 'doughnut' ? {
+                        x: {
+                            ticks: { color: '#94a3b8', font: { size: 11 } },
+                            grid: { color: '#334155' }
+                        },
+                        y: {
+                            ticks: { color: '#94a3b8', font: { size: 11 } },
+                            grid: { color: '#334155' }
+                        }
+                    } : {}
+                }
+            });
+        }
+
+        // ─── Utils ───
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('fr-DZ', { style: 'currency', currency: 'DZD' }).format(value);
+        }
+
+        // ─── Init ───
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboard();
+
+            // Charger les régions pour le filtre
+            apiFetch(`${API_BASE}/par-region/`).then(data => {
+                if (data) {
+                    const select = document.getElementById('region-filter');
+                    data.regions.forEach(r => {
+                        const opt = document.createElement('option');
+                        opt.value = r.region;
+                        opt.textContent = r.region;
+                        select.appendChild(opt);
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

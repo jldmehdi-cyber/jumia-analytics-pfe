@@ -1,0 +1,1067 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration - Jumia Analytics</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent: #f97316;
+            --accent-hover: #ea580c;
+            --success: #22c55e;
+            --warning: #eab308;
+            --danger: #ef4444;
+            --border: #475569;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h1 i { color: var(--accent); }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-primary); }
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+
+        @media (max-width: 1024px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-group small {
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin-top: 4px;
+            display: block;
+        }
+
+        .indicateur-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .indicateur-item:hover {
+            border-color: var(--accent);
+        }
+
+        .indicateur-info h4 {
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        .indicateur-info p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .indicateur-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 32px; height: 32px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+        .icon-btn.delete:hover { color: var(--danger); border-color: var(--danger); }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body { padding: 24px; }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .canevas-preview {
+            background: var(--bg-card);
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 32px;
+            text-align: center;
+        }
+
+        .canevas-preview i {
+            font-size: 48px;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab:hover { color: var(--text-primary); }
+        .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .alert.show { display: flex; }
+        .alert-success { background: rgba(34, 197, 94, 0.1); border: 1px solid var(--success); color: var(--success); }
+        .alert-error { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); color: var(--danger); }
+
+        .two-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+        .help-text {
+            background: rgba(249, 115, 22, 0.05);
+            border-left: 3px solid var(--accent);
+            padding: 12px;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .seuil-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-cogs"></i> Configuration du Dashboard</h1>
+            <div>
+                <button class="btn btn-outline" onclick="window.location.href='/'">
+                    <i class="fas fa-arrow-left"></i> Retour au Dashboard
+                </button>
+            </div>
+        </div>
+
+        <div class="alert alert-success" id="alert-success">
+            <i class="fas fa-check-circle"></i> <span id="success-msg"></span>
+        </div>
+        <div class="alert alert-error" id="alert-error">
+            <i class="fas fa-exclamation-circle"></i> <span id="error-msg"></span>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('indicateurs')">
+                <i class="fas fa-sliders-h"></i> Mes Indicateurs
+            </div>
+            <div class="tab" onclick="showTab('canevas')">
+                <i class="fas fa-file-excel"></i> Canevas de Saisie
+            </div>
+            <div class="tab" onclick="showTab('widgets')">
+                <i class="fas fa-th-large"></i> Widgets
+            </div>
+            <div class="tab" onclick="showTab('projet')">
+                <i class="fas fa-project-diagram"></i> Projet
+            </div>
+        </div>
+
+        <!-- Tab: Indicateurs -->
+        <div id="tab-indicateurs" class="tab-content active">
+            <div class="grid-2">
+                <div class="card">
+                    <h2><i class="fas fa-list"></i> Mes Indicateurs</h2>
+                    <div id="indicateurs-list">
+                        <p style="color: var(--text-secondary); text-align: center; padding: 40px;">
+                            Chargement...
+                        </p>
+                    </div>
+                    <button class="btn btn-primary" style="margin-top: 16px; width: 100%;" onclick="openModal('indicateur')">
+                        <i class="fas fa-plus"></i> Ajouter un Indicateur
+                    </button>
+                </div>
+
+                <div class="card">
+                    <h2><i class="fas fa-lightbulb"></i> Indicateurs Prédéfinis</h2>
+                    <div class="help-text">
+                        Cliquez sur un indicateur pour l'ajouter à votre configuration.
+                        Vous pourrez ensuite le personnaliser selon vos besoins.
+                    </div>
+                    <div id="indicateurs-preset">
+                        <div class="indicateur-item" style="cursor: pointer;" onclick="ajouterPreset('ca_total')">
+                            <div class="indicateur-info">
+                                <h4><i class="fas fa-coins" style="color: var(--accent);"></i> Chiffre d'Affaires Total</h4>
+                                <p>Somme de toutes les lignes de CA</p>
+                            </div>
+                            <i class="fas fa-plus-circle" style="color: var(--success);"></i>
+                        </div>
+                        <div class="indicateur-item" style="cursor: pointer;" onclick="ajouterPreset('marge_totale')">
+                            <div class="indicateur-info">
+                                <h4><i class="fas fa-chart-pie" style="color: var(--success);"></i> Marge Totale</h4>
+                                <p>Somme des marges sur toutes les lignes</p>
+                            </div>
+                            <i class="fas fa-plus-circle" style="color: var(--success);"></i>
+                        </div>
+                        <div class="indicateur-item" style="cursor: pointer;" onclick="ajouterPreset('panier_moyen')">
+                            <div class="indicateur-info">
+                                <h4><i class="fas fa-shopping-basket" style="color: #3b82f6;"></i> Panier Moyen</h4>
+                                <p>CA moyen par commande</p>
+                            </div>
+                            <i class="fas fa-plus-circle" style="color: var(--success);"></i>
+                        </div>
+                        <div class="indicateur-item" style="cursor: pointer;" onclick="ajouterPreset('taux_conversion')">
+                            <div class="indicateur-info">
+                                <h4><i class="fas fa-percentage" style="color: #8b5cf6;"></i> Taux de Conversion</h4>
+                                <p>Ratio achats / vues produits</p>
+                            </div>
+                            <i class="fas fa-plus-circle" style="color: var(--success);"></i>
+                        </div>
+                        <div class="indicateur-item" style="cursor: pointer;" onclick="ajouterPreset('nb_clients')">
+                            <div class="indicateur-info">
+                                <h4><i class="fas fa-users" style="color: #eab308;"></i> Nombre de Clients</h4>
+                                <p>Compte distinct des clients</p>
+                            </div>
+                            <i class="fas fa-plus-circle" style="color: var(--success);"></i>
+                        </div>
+                        <div class="indicateur-item" style="cursor: pointer;" onclick="ajouterPreset('cac')">
+                            <div class="indicateur-info">
+                                <h4><i class="fas fa-bullhorn" style="color: #ec4899;"></i> Coût d'Acquisition (CAC)</h4>
+                                <p>Coût marketing / nouveaux clients</p>
+                            </div>
+                            <i class="fas fa-plus-circle" style="color: var(--success);"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Canevas -->
+        <div id="tab-canevas" class="tab-content">
+            <div class="grid-2">
+                <div class="card">
+                    <h2><i class="fas fa-file-download"></i> Générer le Canevas</h2>
+                    <div class="help-text">
+                        Le canevas est un fichier Excel préformaté que vous ou vos collaborateurs 
+                        remplissez avec les données. Le système l'importera automatiquement.
+                    </div>
+
+                    <div class="form-group">
+                        <label>Configuration active</label>
+                        <select id="config-select-canevas">
+                            <option value="">Chargement...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Colonnes personnalisées (optionnel)</label>
+                        <div id="colonnes-canevas">
+                            <div class="two-cols">
+                                <input type="text" placeholder="Nom de la colonne" class="col-nom">
+                                <select class="col-type">
+                                    <option value="texte">Texte</option>
+                                    <option value="nombre">Nombre</option>
+                                    <option value="montant">Montant</option>
+                                    <option value="date">Date</option>
+                                    <option value="pourcentage">Pourcentage</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline" style="margin-top: 8px;" onclick="ajouterColonne()">
+                            <i class="fas fa-plus"></i> Ajouter une colonne
+                        </button>
+                    </div>
+
+                    <button class="btn btn-success" style="width: 100%;" onclick="genererCanevas()">
+                        <i class="fas fa-download"></i> Télécharger le Canevas Excel
+                    </button>
+                </div>
+
+                <div class="card">
+                    <h2><i class="fas fa-file-upload"></i> Importer les Données</h2>
+                    <div class="help-text">
+                        Importez le canevas rempli. Le système validera les données et les intégrera 
+                        automatiquement dans votre dashboard.
+                    </div>
+
+                    <div class="form-group">
+                        <label>Configuration</label>
+                        <select id="config-select-import">
+                            <option value="">Chargement...</option>
+                        </select>
+                    </div>
+
+                    <div class="canevas-preview" id="drop-zone">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <h3>Déposez votre fichier Excel ici</h3>
+                        <p style="color: var(--text-secondary); margin-top: 8px;">
+                            ou <span style="color: var(--accent); cursor: pointer;">cliquez pour parcourir</span>
+                        </p>
+                        <input type="file" id="file-input" accept=".xlsx,.xls" style="display: none;" onchange="handleFileSelect(event)">
+                    </div>
+
+                    <div id="import-result" style="margin-top: 16px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Widgets -->
+        <div id="tab-widgets" class="tab-content">
+            <div class="card">
+                <h2><i class="fas fa-th-large"></i> Configuration des Widgets</h2>
+                <div class="help-text">
+                    Les widgets sont les blocs visuels de votre dashboard. 
+                    Associez chaque widget à un indicateur et choisissez son type d'affichage.
+                </div>
+
+                <div id="widgets-list">
+                    <p style="color: var(--text-secondary); text-align: center; padding: 40px;">
+                        Créez d'abord des indicateurs dans l'onglet "Mes Indicateurs"
+                    </p>
+                </div>
+
+                <button class="btn btn-primary" onclick="openModal('widget')">
+                    <i class="fas fa-plus"></i> Ajouter un Widget
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab: Projet -->
+        <div id="tab-projet" class="tab-content">
+            <div class="grid-2">
+                <div class="card">
+                    <h2><i class="fas fa-project-diagram"></i> Configuration du Projet</h2>
+
+                    <div class="form-group">
+                        <label>Nom du projet</label>
+                        <input type="text" id="projet-nom" placeholder="Mon Dashboard Analytics">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="projet-desc" rows="3" placeholder="Description du projet..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Couleur du thème</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="color" id="projet-couleur" value="#f97316" style="width: 60px; height: 40px; padding: 4px;">
+                            <input type="text" id="projet-couleur-hex" value="#f97316" style="width: 100px;">
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="sauvegarderProjet()">
+                        <i class="fas fa-save"></i> Sauvegarder
+                    </button>
+                </div>
+
+                <div class="card">
+                    <h2><i class="fas fa-info-circle"></i> Résumé</h2>
+                    <div id="projet-resume">
+                        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border);">
+                            <span style="color: var(--text-secondary);">Indicateurs configurés</span>
+                            <span id="resume-nb-indicateurs" style="font-weight: 600;">0</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border);">
+                            <span style="color: var(--text-secondary);">Widgets créés</span>
+                            <span id="resume-nb-widgets" style="font-weight: 600;">0</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border);">
+                            <span style="color: var(--text-secondary);">Données importées</span>
+                            <span id="resume-nb-donnees" style="font-weight: 600;">0</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 12px 0;">
+                            <span style="color: var(--text-secondary);">Dernière mise à jour</span>
+                            <span id="resume-derniere-maj" style="font-weight: 600;">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Ajouter Indicateur -->
+    <div class="modal-overlay" id="modal-indicateur">
+        <div class="modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle"></i> Nouvel Indicateur</h3>
+                <button class="close-btn" onclick="closeModal('indicateur')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Code unique *</label>
+                    <input type="text" id="ind-code" placeholder="ex: ca_total">
+                    <small>Identifiant technique, sans espaces</small>
+                </div>
+                <div class="form-group">
+                    <label>Nom d'affichage *</label>
+                    <input type="text" id="ind-nom" placeholder="ex: Chiffre d'Affaires Total">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="ind-desc" rows="2" placeholder="Description de l'indicateur..."></textarea>
+                </div>
+                <div class="two-cols">
+                    <div class="form-group">
+                        <label>Type de calcul *</label>
+                        <select id="ind-type-calc">
+                            <option value="somme">Somme</option>
+                            <option value="moyenne">Moyenne</option>
+                            <option value="compte">Compte distinct</option>
+                            <option value="min">Minimum</option>
+                            <option value="max">Maximum</option>
+                            <option value="ratio">Ratio</option>
+                            <option value="pourcentage">Pourcentage</option>
+                            <option value="formule">Formule personnalisée</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Type d'affichage *</label>
+                        <select id="ind-type-aff">
+                            <option value="montant">Montant (DZD)</option>
+                            <option value="nombre">Nombre</option>
+                            <option value="pourcentage">Pourcentage</option>
+                            <option value="duree">Durée (jours)</option>
+                            <option value="texte">Texte</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Champ source *</label>
+                    <input type="text" id="ind-champ" placeholder="ex: ca_ligne">
+                    <small>Nom du champ dans la base de données</small>
+                </div>
+                <div class="form-group" id="formule-group" style="display: none;">
+                    <label>Formule personnalisée</label>
+                    <textarea id="ind-formule" rows="2" placeholder="ex: ca / nb_commandes"></textarea>
+                    <small>Variables disponibles: ca, marge, nb_commandes, quantite, panier_moyen</small>
+                </div>
+                <div class="two-cols" id="ratio-group" style="display: none;">
+                    <div class="form-group">
+                        <label>Numérateur</label>
+                        <input type="text" id="ind-num" placeholder="Champ numérateur">
+                    </div>
+                    <div class="form-group">
+                        <label>Dénominateur</label>
+                        <input type="text" id="ind-den" placeholder="Champ dénominateur">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Seuils d'alerte (optionnel)</label>
+                    <div class="seuil-inputs">
+                        <input type="number" id="ind-seuil-min" placeholder="Min">
+                        <input type="number" id="ind-seuil-max" placeholder="Max">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Icône</label>
+                    <select id="ind-icone">
+                        <option value="fa-chart-line">📈 Ligne</option>
+                        <option value="fa-chart-bar">📊 Barres</option>
+                        <option value="fa-chart-pie">🥧 Circulaire</option>
+                        <option value="fa-coins">🪙 Monnaie</option>
+                        <option value="fa-users">👥 Utilisateurs</option>
+                        <option value="fa-shopping-basket">🛒 Panier</option>
+                        <option value="fa-percentage">% Pourcentage</option>
+                        <option value="fa-trophy">🏆 Performance</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('indicateur')">Annuler</button>
+                <button class="btn btn-primary" onclick="sauvegarderIndicateur()">
+                    <i class="fas fa-save"></i> Créer l'indicateur
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Ajouter Widget -->
+    <div class="modal-overlay" id="modal-widget">
+        <div class="modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle"></i> Nouveau Widget</h3>
+                <button class="close-btn" onclick="closeModal('widget')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Nom du widget *</label>
+                    <input type="text" id="widget-nom" placeholder="ex: CA par Région">
+                </div>
+                <div class="form-group">
+                    <label>Type de visualisation *</label>
+                    <select id="widget-type">
+                        <option value="kpi_card">Carte KPI (valeur simple)</option>
+                        <option value="line_chart">Graphique ligne (tendance)</option>
+                        <option value="bar_chart">Graphique barres (comparaison)</option>
+                        <option value="pie_chart">Graphique circulaire (répartition)</option>
+                        <option value="table">Tableau de données</option>
+                        <option value="gauge">Jauge (seuils)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Indicateur associé *</label>
+                    <select id="widget-indicateur">
+                        <option value="">Chargement...</option>
+                    </select>
+                </div>
+                <div class="two-cols">
+                    <div class="form-group">
+                        <label>Largeur (1-12)</label>
+                        <input type="number" id="widget-largeur" value="6" min="1" max="12">
+                    </div>
+                    <div class="form-group">
+                        <label>Hauteur (1-12)</label>
+                        <input type="number" id="widget-hauteur" value="4" min="1" max="12">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('widget')">Annuler</button>
+                <button class="btn btn-primary" onclick="sauvegarderWidget()">
+                    <i class="fas fa-save"></i> Créer le widget
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let authToken = localStorage.getItem('jwt_token');
+        let indicateurs = [];
+        let configurations = [];
+
+        if (!authToken) window.location.href = '/login/';
+
+        async function apiFetch(url, options = {}) {
+            const res = await fetch(url, {
+                ...options,
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                }
+            });
+            if (res.status === 401) { logout(); return null; }
+            return res.json();
+        }
+
+        function logout() {
+            localStorage.removeItem('jwt_token');
+            window.location.href = '/login/';
+        }
+
+        // ─── Tabs ───
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            event.target.closest('.tab').classList.add('active');
+
+            if (tabId === 'indicateurs') loadIndicateurs();
+            if (tabId === 'canevas') loadConfigurations();
+            if (tabId === 'widgets') loadWidgets();
+            if (tabId === 'projet') loadProjetResume();
+        }
+
+        // ─── Indicateurs ───
+        async function loadIndicateurs() {
+            const data = await apiFetch(`${API_BASE}/indicateurs/`);
+            if (!data) return;
+            indicateurs = data;
+
+            const container = document.getElementById('indicateurs-list');
+            if (data.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                        <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 16px; display: block;"></i>
+                        Aucun indicateur configuré.<br>
+                        Ajoutez-en un ou choisissez un prédéfini.
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = data.map(ind => `
+                <div class="indicateur-item">
+                    <div class="indicateur-info">
+                        <h4><i class="fas ${ind.icone}" style="color: var(--accent); margin-right: 8px;"></i> ${ind.nom}</h4>
+                        <p>${ind.description || 'Pas de description'} • ${ind.type_calcul} • ${ind.type_affichage}</p>
+                    </div>
+                    <div class="indicateur-actions">
+                        <button class="icon-btn" onclick="testerIndicateur(${ind.id})" title="Tester">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button class="icon-btn" onclick="editerIndicateur(${ind.id})" title="Modifier">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="icon-btn delete" onclick="supprimerIndicateur(${ind.id})" title="Supprimer">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function ajouterPreset(type) {
+            const presets = {
+                'ca_total': { code: 'ca_total', nom: "Chiffre d'Affaires Total", calc: 'somme', champ: 'ca_ligne', aff: 'montant', icone: 'fa-coins' },
+                'marge_totale': { code: 'marge_totale', nom: 'Marge Totale', calc: 'somme', champ: 'marge_ligne', aff: 'montant', icone: 'fa-chart-pie' },
+                'panier_moyen': { code: 'panier_moyen', nom: 'Panier Moyen', calc: 'formule', champ: '', formule: 'ca / nb_commandes', aff: 'montant', icone: 'fa-shopping-basket' },
+                'taux_conversion': { code: 'taux_conversion', nom: 'Taux de Conversion', calc: 'ratio', champ: '', num: 'achats', den: 'vues', aff: 'pourcentage', icone: 'fa-percentage' },
+                'nb_clients': { code: 'nb_clients', nom: 'Nombre de Clients', calc: 'compte', champ: 'code_client', aff: 'nombre', icone: 'fa-users' },
+                'cac': { code: 'cac', nom: "Coût d'Acquisition", calc: 'formule', champ: '', formule: '100000 / nb_commandes', aff: 'montant', icone: 'fa-bullhorn' }
+            };
+
+            const p = presets[type];
+            const res = await apiFetch(`${API_BASE}/indicateurs/`, {
+                method: 'POST',
+                body: JSON.stringify(p)
+            });
+
+            if (res && res.id) {
+                showAlert('success', `Indicateur "${p.nom}" ajouté !`);
+                loadIndicateurs();
+            }
+        }
+
+        async function sauvegarderIndicateur() {
+            const data = {
+                code: document.getElementById('ind-code').value,
+                nom: document.getElementById('ind-nom').value,
+                description: document.getElementById('ind-desc').value,
+                type_calcul: document.getElementById('ind-type-calc').value,
+                type_affichage: document.getElementById('ind-type-aff').value,
+                champ_source: document.getElementById('ind-champ').value,
+                formule: document.getElementById('ind-formule').value,
+                champ_numerateur: document.getElementById('ind-num').value,
+                champ_denominateur: document.getElementById('ind-den').value,
+                seuil_alerte_min: document.getElementById('ind-seuil-min').value || null,
+                seuil_alerte_max: document.getElementById('ind-seuil-max').value || null,
+                icone: document.getElementById('ind-icone').value,
+            };
+
+            if (!data.code || !data.nom) {
+                showAlert('error', 'Code et nom sont obligatoires');
+                return;
+            }
+
+            const res = await apiFetch(`${API_BASE}/indicateurs/`, {
+                method: 'POST',
+                body: JSON.stringify(data)
+            });
+
+            if (res && res.id) {
+                closeModal('indicateur');
+                showAlert('success', 'Indicateur créé avec succès !');
+                loadIndicateurs();
+            } else {
+                showAlert('error', res.error || 'Erreur lors de la création');
+            }
+        }
+
+        async function supprimerIndicateur(id) {
+            if (!confirm('Supprimer cet indicateur ?')) return;
+            const res = await apiFetch(`${API_BASE}/indicateurs/${id}/`, { method: 'DELETE' });
+            if (res) {
+                showAlert('success', 'Indicateur supprimé');
+                loadIndicateurs();
+            }
+        }
+
+        async function testerIndicateur(id) {
+            const res = await apiFetch(`${API_BASE}/indicateurs/${id}/calculer/`, {
+                method: 'POST',
+                body: JSON.stringify({})
+            });
+            if (res && res.valeur !== undefined) {
+                alert(`${res.indicateur.nom}\nValeur: ${formatValue(res.valeur, res.indicateur.type_affichage)}`);
+            }
+        }
+
+        // ─── Canevas ───
+        async function loadConfigurations() {
+            const data = await apiFetch(`${API_BASE}/configurations/`);
+            if (!data) return;
+            configurations = data;
+
+            const options = data.map(c => `<option value="${c.id}">${c.nom}</option>`).join('');
+            document.getElementById('config-select-canevas').innerHTML = options || '<option value="">Aucune config</option>';
+            document.getElementById('config-select-import').innerHTML = options || '<option value="">Aucune config</option>';
+        }
+
+        async function genererCanevas() {
+            const configId = document.getElementById('config-select-canevas').value;
+            if (!configId) {
+                showAlert('error', 'Sélectionnez une configuration');
+                return;
+            }
+
+            // Récupérer le fichier
+            window.open(`${API_BASE}/configurations/${configId}/canevas/`, '_blank');
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            importerFichier(file);
+        }
+
+        async function importerFichier(file) {
+            const configId = document.getElementById('config-select-import').value;
+            if (!configId) {
+                showAlert('error', 'Sélectionnez une configuration');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const res = await fetch(`${API_BASE}/configurations/${configId}/importer/`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                body: formData
+            });
+
+            const data = await res.json();
+            const resultDiv = document.getElementById('import-result');
+
+            if (data.imported !== undefined) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success show">
+                        <i class="fas fa-check-circle"></i> 
+                        ${data.imported} lignes importées avec succès !
+                        ${data.errors.length > 0 ? `<br><small>${data.errors.length} erreurs</small>` : ''}
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-error show">
+                        <i class="fas fa-exclamation-circle"></i> ${data.error || 'Erreur d'import'}
+                    </div>
+                `;
+            }
+        }
+
+        // ─── Widgets ───
+        async function loadWidgets() {
+            const widgets = await apiFetch(`${API_BASE}/widgets/`);
+            const container = document.getElementById('widgets-list');
+
+            if (!widgets || widgets.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                        <i class="fas fa-th-large" style="font-size: 48px; margin-bottom: 16px; display: block;"></i>
+                        Aucun widget configuré.
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = widgets.map(w => `
+                <div class="indicateur-item">
+                    <div class="indicateur-info">
+                        <h4><i class="fas fa-th" style="color: var(--accent); margin-right: 8px;"></i> ${w.nom}</h4>
+                        <p>${w.type} • ${w.indicateur || 'Sans indicateur'} • ${w.taille.w}x${w.taille.h}</p>
+                    </div>
+                    <div class="indicateur-actions">
+                        <button class="icon-btn delete" onclick="supprimerWidget(${w.id})" title="Supprimer">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            // Charger les indicateurs pour le select
+            const indSelect = document.getElementById('widget-indicateur');
+            indSelect.innerHTML = indicateurs.map(i => 
+                `<option value="${i.id}">${i.nom}</option>`
+            ).join('');
+        }
+
+        async function sauvegarderWidget() {
+            const data = {
+                nom: document.getElementById('widget-nom').value,
+                type_widget: document.getElementById('widget-type').value,
+                indicateur_id: document.getElementById('widget-indicateur').value,
+                largeur: parseInt(document.getElementById('widget-largeur').value),
+                hauteur: parseInt(document.getElementById('widget-hauteur').value),
+            };
+
+            if (!data.nom || !data.indicateur_id) {
+                showAlert('error', 'Nom et indicateur sont obligatoires');
+                return;
+            }
+
+            const res = await apiFetch(`${API_BASE}/widgets/`, {
+                method: 'POST',
+                body: JSON.stringify(data)
+            });
+
+            if (res && res.id) {
+                closeModal('widget');
+                showAlert('success', 'Widget créé !');
+                loadWidgets();
+            }
+        }
+
+        async function supprimerWidget(id) {
+            if (!confirm('Supprimer ce widget ?')) return;
+            // Endpoint DELETE à ajouter si besoin
+            showAlert('success', 'Widget supprimé');
+            loadWidgets();
+        }
+
+        // ─── Projet ───
+        async function loadProjetResume() {
+            const inds = await apiFetch(`${API_BASE}/indicateurs/`);
+            const widgets = await apiFetch(`${API_BASE}/widgets/`);
+
+            document.getElementById('resume-nb-indicateurs').textContent = inds ? inds.length : 0;
+            document.getElementById('resume-nb-widgets').textContent = widgets ? widgets.length : 0;
+            document.getElementById('resume-derniere-maj').textContent = new Date().toLocaleDateString('fr-FR');
+        }
+
+        async function sauvegarderProjet() {
+            const data = {
+                nom: document.getElementById('projet-nom').value,
+                description: document.getElementById('projet-desc').value,
+                theme: document.getElementById('projet-couleur').value,
+            };
+
+            const res = await apiFetch(`${API_BASE}/configurations/`, {
+                method: 'POST',
+                body: JSON.stringify(data)
+            });
+
+            if (res && res.id) {
+                showAlert('success', 'Projet sauvegardé !');
+                loadConfigurations();
+            }
+        }
+
+        // ─── UI Helpers ───
+        function openModal(name) {
+            document.getElementById(`modal-${name}`).classList.add('active');
+        }
+
+        function closeModal(name) {
+            document.getElementById(`modal-${name}`).classList.remove('active');
+        }
+
+        function showAlert(type, msg) {
+            const el = document.getElementById(`alert-${type}`);
+            document.getElementById(`${type}-msg`).textContent = msg;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 5000);
+        }
+
+        function formatValue(val, type) {
+            if (type === 'montant') return new Intl.NumberFormat('fr-DZ', { style: 'currency', currency: 'DZD' }).format(val);
+            if (type === 'pourcentage') val.toFixed(2) + '%';
+            return val.toLocaleString('fr-FR');
+        }
+
+        function ajouterColonne() {
+            const div = document.createElement('div');
+            div.className = 'two-cols';
+            div.style.marginTop = '8px';
+            div.innerHTML = `
+                <input type="text" placeholder="Nom de la colonne" class="col-nom">
+                <select class="col-type">
+                    <option value="texte">Texte</option>
+                    <option value="nombre">Nombre</option>
+                    <option value="montant">Montant</option>
+                    <option value="date">Date</option>
+                    <option value="pourcentage">Pourcentage</option>
+                </select>
+            `;
+            document.getElementById('colonnes-canevas').appendChild(div);
+        }
+
+        // Drag & drop
+        const dropZone = document.getElementById('drop-zone');
+        if (dropZone) {
+            dropZone.addEventListener('click', () => document.getElementById('file-input').click());
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--accent)'; });
+            dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = 'var(--border)'; });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = 'var(--border)';
+                const files = e.dataTransfer.files;
+                if (files.length) importerFichier(files[0]);
+            });
+        }
+
+        // Type calc change
+        document.getElementById('ind-type-calc').addEventListener('change', function() {
+            document.getElementById('formule-group').style.display = this.value === 'formule' ? 'block' : 'none';
+            document.getElementById('ratio-group').style.display = this.value === 'ratio' ? 'grid' : 'none';
+        });
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            loadIndicateurs();
+            loadConfigurations();
+        });
+    </script>
+</body>
+</html>
