@@ -690,13 +690,23 @@
             if (tabId === 'alertes') loadAlertes();
         }
 
-        // ─── Dashboard ───
-        async function loadDashboard() {
+        // ─── Helpers filtres ───
+        function getFilters() {
             const region = document.getElementById('region-filter').value;
             const periode = document.getElementById('periode-filter').value;
+            const params = new URLSearchParams();
+            if (region && region !== 'all') params.set('region', region);
+            if (periode && periode !== 'all') params.set('periode', periode);
+            return params.toString();
+        }
+
+        // ─── Dashboard ───
+        async function loadDashboard() {
+            const f = getFilters();
+            const sep = f ? '&' : '';
 
             // KPIs
-            const kpis = await apiFetch(`${API_BASE}/kpis/?region=${region}&periode=${periode}`);
+            const kpis = await apiFetch(`${API_BASE}/kpis/?${f}`);
             if (kpis) {
                 document.getElementById('kpi-ca').textContent = formatCurrency(kpis.chiffre_affaires);
                 document.getElementById('kpi-marge').textContent = formatCurrency(kpis.marge_totale);
@@ -706,45 +716,45 @@
                 document.getElementById('kpi-clients').textContent = kpis.nombre_clients.toLocaleString();
 
                 const trendEl = document.getElementById('kpi-ca-trend');
-                trendEl.innerHTML = kpis.croissance >= 0 
+                trendEl.innerHTML = kpis.croissance >= 0
                     ? `<i class="fas fa-arrow-up"></i> +${kpis.croissance}%`
                     : `<i class="fas fa-arrow-down"></i> ${kpis.croissance}%`;
                 trendEl.className = `kpi-trend ${kpis.croissance >= 0 ? 'up' : 'down'}`;
             }
 
             // Tendances
-            const tendances = await apiFetch(`${API_BASE}/tendances/?region=${region}`);
+            const tendances = await apiFetch(`${API_BASE}/tendances/?${f}`);
             if (tendances) updateChart('chart-tendances', 'line', tendances.labels, [
                 { label: 'CA', data: tendances.ca, color: '#f97316' },
                 { label: 'Marge', data: tendances.marge, color: '#22c55e' }
             ]);
 
             // Régions
-            const regions = await apiFetch(`${API_BASE}/par-region/`);
+            const regions = await apiFetch(`${API_BASE}/par-region/?${f}`);
             if (regions) {
-                updateChart('chart-regions', 'bar', 
+                updateChart('chart-regions', 'bar',
                     regions.regions.map(r => r.region),
                     [{ label: 'CA', data: regions.regions.map(r => r.ca), color: '#3b82f6' }]
                 );
             }
 
             // Articles
-            const articles = await apiFetch(`${API_BASE}/par-article/?top=10`);
+            const articles = await apiFetch(`${API_BASE}/par-article/?top=10${sep}${f}`);
             if (articles) {
                 updateChart('chart-articles', 'bar',
                     articles.articles.map(a => a.nom.substring(0, 20)),
                     [{ label: 'CA', data: articles.articles.map(a => a.ca), color: '#8b5cf6' }]
                 );
             }
-
-            // Catégories (depuis articles)
-            // Note: endpoint catégories à ajouter si besoin
         }
 
         // ─── Comportemental ───
         async function loadComportemental() {
+            const f = getFilters();
+            const sep = f ? '&' : '';
+
             // Funnel
-            const funnel = await apiFetch(`${API_BASE}/funnel/`);
+            const funnel = await apiFetch(`${API_BASE}/funnel/?${f}`);
             if (funnel) {
                 updateChart('chart-funnel', 'bar',
                     funnel.funnel.map(f => f.etape),
@@ -753,7 +763,7 @@
             }
 
             // Produits fantômes
-            const fantomes = await apiFetch(`${API_BASE}/produits-fantomes/`);
+            const fantomes = await apiFetch(`${API_BASE}/produits-fantomes/?${f}`);
             if (fantomes) {
                 document.getElementById('tbody-fantomes').innerHTML = fantomes.produits_fantomes.map(p => `
                     <tr><td>${p.code}</td><td>${p.nom}</td><td>${p.vues}</td>
@@ -762,41 +772,46 @@
             }
 
             // Produits cachés
-            const caches = await apiFetch(`${API_BASE}/produits-caches/`);
+            const caches = await apiFetch(`${API_BASE}/produits-caches/?${f}`);
             if (caches) {
                 document.getElementById('tbody-caches').innerHTML = caches.produits_caches.map(p => `
-                    <tr><td>${p.code}</td><td>${p.nom}</td><td>${p.vues}</td>
-                    <td>${p.achats}</td><td>${p.ratio}:1</td><td>${formatCurrency(p.ca)}</td></tr>
+                    <tr><td>${p.code}</td><td>${p.nom}</td>
+                    <td>${p.nb_transactions}</td><td>${formatCurrency(p.ca_actuel)}</td>
+                    <td><span style="color:var(--warning);font-weight:600;">${p.statut}</span></td>
+                    <td>${(p.score_opportunite * 100).toFixed(0)}%</td></tr>
                 `).join('');
             }
 
             // Points de friction
-            const friction = await apiFetch(`${API_BASE}/points-friction/`);
+            const friction = await apiFetch(`${API_BASE}/points-friction/?${f}`);
             if (friction) {
                 document.getElementById('tbody-friction').innerHTML = friction.points_friction.map(p => `
-                    <tr><td>${p.page}</td><td><span style="color: var(--danger); font-weight: 600;">${p.abandons}</span></td></tr>
+                    <tr><td>${p.page}</td><td>${p.description}</td>
+                    <td><span style="color: var(--danger); font-weight: 600;">${p.severite}</span></td>
+                    <td>${formatCurrency(p.impact)}</td></tr>
                 `).join('');
             }
         }
 
         // ─── RFM ───
         async function loadRFM() {
-            const rfm = await apiFetch(`${API_BASE}/rfm/`);
+            const f = getFilters();
+            const rfm = await apiFetch(`${API_BASE}/rfm/?${f}`);
             if (rfm) {
                 updateChart('chart-rfm', 'doughnut',
                     rfm.segments.map(s => s.segment),
-                    [{ data: rfm.segments.map(s => s.count), 
+                    [{ data: rfm.segments.map(s => s.count),
                        color: ['#22c55e', '#3b82f6', '#eab308', '#8b5cf6', '#ef4444', '#64748b'] }]
                 );
 
                 document.getElementById('tbody-rfm').innerHTML = rfm.top_clients.map(c => `
                     <tr>
                         <td>${c.nom_client}</td>
-                        <td><span class="badge badge-${c.segment_rfm}">${c.segment_rfm}</span></td>
+                        <td><span class="badge badge-${c.segment_rfm}">${c.segment_rfm.replace(/_/g,' ')}</span></td>
                         <td>${c.recence}j</td>
                         <td>${c.frequence}</td>
                         <td>${formatCurrency(c.montant)}</td>
-                        <td>${c.score_rfm}</td>
+                        <td>${c.score_rfm}/15</td>
                     </tr>
                 `).join('');
             }
@@ -804,7 +819,8 @@
 
         // ─── Prévisions ───
         async function loadPrevisions() {
-            const prev = await apiFetch(`${API_BASE}/previsions/`);
+            const f = getFilters();
+            const prev = await apiFetch(`${API_BASE}/previsions/?${f}`);
             if (prev && !prev.error) {
                 const labels = [...prev.historique.labels, ...prev.previsions.map(p => p.mois)];
                 const histData = [...prev.historique.ca, ...Array(prev.previsions.length).fill(null)];
@@ -816,15 +832,16 @@
                 ]);
 
                 document.getElementById('previsions-stats').innerHTML = `
-                    <i class="fas fa-info-circle"></i> R² Score: ${prev.r2_score} | 
-                    Prévisions sur 3 mois basées sur régression polynomiale
+                    <i class="fas fa-info-circle"></i> R² Score: <strong>${prev.r2_score}</strong> (${prev.qualite}) |
+                    Méthode: ${prev.methode} | ${prev.stats.nb_mois_historique} mois d'historique
                 `;
             }
         }
 
         // ─── Alertes ───
         async function loadAlertes() {
-            const alertes = await apiFetch(`${API_BASE}/alertes/`);
+            const f = getFilters();
+            const alertes = await apiFetch(`${API_BASE}/alertes/?${f}`);
             const container = document.getElementById('alertes-container');
 
             if (alertes && alertes.alertes.length > 0) {

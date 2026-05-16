@@ -81,23 +81,54 @@ def health_check(request):
 # HELPERS
 # ============================================================
 
-def _apply_period(qs, periode, date_field='date_transaction'):
-    today = date.today()
-    if periode == 'mois':
-        return qs.filter(**{f'{date_field}__gte': today.replace(day=1)})
-    elif periode == 'trimestre':
-        q = (today.month - 1) // 3
-        return qs.filter(**{f'{date_field}__gte': today.replace(month=q * 3 + 1, day=1)})
-    elif periode == 'annee':
-        return qs.filter(**{f'{date_field}__year': today.year})
+def _get_ref_date():
+    """Retourne la date la plus récente dans les données (évite de filtrer dans le vide si les données sont historiques)."""
+    from django.db.models import Max
+    result = DonneeBrute.objects.aggregate(max_date=Max('date_transaction'))
+    return result['max_date'] or date.today()
+
+
+def _apply_period(qs, periode, date_field='date_transaction', date_debut=None, date_fin=None):
+    """Applique un filtre temporel. Utilise la date max des données comme référence (pas date.today())."""
+    # Plage personnalisée
+    if date_debut:
+        try:
+            qs = qs.filter(**{f'{date_field}__gte': date.fromisoformat(date_debut)})
+        except (ValueError, TypeError):
+            pass
+    if date_fin:
+        try:
+            qs = qs.filter(**{f'{date_field}__lte': date.fromisoformat(date_fin)})
+        except (ValueError, TypeError):
+            pass
+    if date_debut or date_fin:
+        return qs
+
+    # Périodes relatives : on ancre sur la date max des données, pas sur aujourd'hui
+    if periode and periode != 'all':
+        ref = _get_ref_date()
+        if periode == 'mois':
+            qs = qs.filter(**{f'{date_field}__year': ref.year, f'{date_field}__month': ref.month})
+        elif periode == 'trimestre':
+            q_start = ((ref.month - 1) // 3) * 3 + 1
+            q_end = min(q_start + 2, 12)
+            qs = qs.filter(**{
+                f'{date_field}__year': ref.year,
+                f'{date_field}__month__gte': q_start,
+                f'{date_field}__month__lte': q_end,
+            })
+        elif periode == 'annee':
+            qs = qs.filter(**{f'{date_field}__year': ref.year})
     return qs
 
-def _base_qs(region=None, periode=None):
+
+def _base_qs(region=None, periode=None, config_id=None, date_debut=None, date_fin=None):
     qs = DonneeBrute.objects.all()
+    if config_id:
+        qs = qs.filter(config_id=config_id)
     if region and region != 'all':
         qs = qs.filter(region=region)
-    if periode:
-        qs = _apply_period(qs, periode)
+    qs = _apply_period(qs, periode, date_debut=date_debut, date_fin=date_fin)
     return qs
 
 
@@ -110,8 +141,11 @@ def _base_qs(region=None, periode=None):
 def api_kpis(request):
     region = request.GET.get('region', 'all')
     periode = request.GET.get('periode', 'all')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    config_id = request.GET.get('config_id')
 
-    qs = _base_qs(region, periode)
+    qs = _base_qs(region=region, periode=periode, config_id=config_id, date_debut=date_debut, date_fin=date_fin)
     agg = qs.aggregate(ca=Sum('ca_ligne'), marge=Sum('marge_ligne'), nb=Count('id_donnee'))
 
     ca = float(agg['ca'] or 0)
@@ -121,14 +155,16 @@ def api_kpis(request):
     panier_moyen = round(ca / nb_cmd, 2) if nb_cmd else 0
     marge_pct = round((marge / ca * 100), 1) if ca else 0
 
-    # Croissance vs mois précédent
+    # Croissance vs mois précédent (ancré sur la date max des données)
     croissance = 0
-    today = date.today()
-    prev_last = today.replace(day=1) - timedelta(days=1)
+    ref = _get_ref_date()
+    prev_last = ref.replace(day=1) - timedelta(days=1)
     prev_first = prev_last.replace(day=1)
     qs_prev = DonneeBrute.objects.filter(date_transaction__gte=prev_first, date_transaction__lte=prev_last)
     if region and region != 'all':
         qs_prev = qs_prev.filter(region=region)
+    if config_id:
+        qs_prev = qs_prev.filter(config_id=config_id)
     ca_prev = float(qs_prev.aggregate(ca=Sum('ca_ligne'))['ca'] or 0)
     if ca_prev:
         croissance = round(((ca - ca_prev) / ca_prev) * 100, 1)
@@ -148,7 +184,11 @@ def api_kpis(request):
 @permission_classes([IsAuthenticated])
 def api_tendances(request):
     region = request.GET.get('region', 'all')
-    qs = _base_qs(region)
+    periode = request.GET.get('periode', 'all')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    config_id = request.GET.get('config_id')
+    qs = _base_qs(region=region, periode=periode, config_id=config_id, date_debut=date_debut, date_fin=date_fin)
 
     data = (qs
         .annotate(mois=TruncMonth('date_transaction'))
@@ -175,7 +215,13 @@ def api_tendances(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def api_par_region(request):
-    data = (DonneeBrute.objects
+    region = request.GET.get('region', 'all')
+    periode = request.GET.get('periode', 'all')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    config_id = request.GET.get('config_id')
+    qs = _base_qs(region=region, periode=periode, config_id=config_id, date_debut=date_debut, date_fin=date_fin)
+    data = (qs
         .values('region')
         .annotate(ca=Sum('ca_ligne'), marge=Sum('marge_ligne'), nb_clients=Count('code_client', distinct=True))
         .order_by('-ca')
@@ -192,7 +238,13 @@ def api_par_region(request):
 @permission_classes([IsAuthenticated])
 def api_par_article(request):
     top = int(request.GET.get('top', 10))
-    data = (DonneeBrute.objects
+    region = request.GET.get('region', 'all')
+    periode = request.GET.get('periode', 'all')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    config_id = request.GET.get('config_id')
+    qs = _base_qs(region=region, periode=periode, config_id=config_id, date_debut=date_debut, date_fin=date_fin)
+    data = (qs
         .values('code_article', 'nom_article', 'categorie')
         .annotate(ca=Sum('ca_ligne'), quantite=Sum('quantite'), nb_transactions=Count('id_donnee'))
         .order_by('-ca')[:top]
@@ -235,8 +287,14 @@ def api_funnel(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def api_produits_fantomes(request):
+    region = request.GET.get('region', 'all')
+    periode = request.GET.get('periode', 'all')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    config_id = request.GET.get('config_id')
+    qs = _base_qs(region=region, periode=periode, config_id=config_id, date_debut=date_debut, date_fin=date_fin)
     # Articles avec beaucoup de transactions mais faible CA moyen par transaction
-    data = (DonneeBrute.objects
+    data = (qs
         .values('code_article', 'nom_article')
         .annotate(nb_trans=Count('id_donnee'), ca_total=Sum('ca_ligne'), prix_moy=Avg('prix_unitaire'))
         .filter(nb_trans__gte=2)
@@ -259,8 +317,12 @@ def api_produits_caches(request):
     Produits 'cachés' : fort CA unitaire mais faible volume de transactions.
     Ces produits méritent plus de visibilité marketing.
     """
+    region = request.GET.get('region', 'all')
+    periode = request.GET.get('periode', 'all')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
     config_id = request.GET.get('config_id')
-    qs = DonneeBrute.objects.filter(config_id=config_id) if config_id else DonneeBrute.objects.all()
+    qs = _base_qs(region=region, periode=periode, config_id=config_id, date_debut=date_debut, date_fin=date_fin)
 
     # Calculer les métriques par article
     data = list(qs.values('code_article', 'nom_article', 'categorie')
@@ -311,8 +373,12 @@ def api_points_friction(request):
     Identifie les articles avec forte variance de prix (indicateur de négociation/friction)
     et les clients avec longues périodes d'inactivité entre achats.
     """
+    region = request.GET.get('region', 'all')
+    periode = request.GET.get('periode', 'all')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
     config_id = request.GET.get('config_id')
-    qs = DonneeBrute.objects.filter(config_id=config_id) if config_id else DonneeBrute.objects.all()
+    qs = _base_qs(region=region, periode=periode, config_id=config_id, date_debut=date_debut, date_fin=date_fin)
 
     if not qs.exists():
         return Response({'points_friction': [], 'source': 'aucune_donnee'})
@@ -374,13 +440,18 @@ def api_segmentation_comportementale(request):
     Segmentation comportementale des clients basée sur les patterns d'achat.
     Utilise les données transactionnelles en l'absence de données comportementales web.
     """
+    region = request.GET.get('region', 'all')
+    periode = request.GET.get('periode', 'all')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
     config_id = request.GET.get('config_id')
-    qs = DonneeBrute.objects.filter(config_id=config_id) if config_id else DonneeBrute.objects.all()
+    qs = _base_qs(region=region, periode=periode, config_id=config_id, date_debut=date_debut, date_fin=date_fin)
 
     if not qs.exists():
         return Response({'segments': [], 'clients': [], 'source': 'aucune_donnee'})
 
-    today = date.today()
+    # Date de référence = date max des données (pas aujourd'hui)
+    ref_date = _get_ref_date()
 
     # Calculer les métriques par client
     clients_data = list(qs.values('code_client', 'nom_client')
@@ -394,12 +465,28 @@ def api_segmentation_comportementale(request):
         )
     )
 
+    # Calcul des seuils percentiles une seule fois (hors de la boucle)
+    ca_all_sorted = sorted(float(x.get('ca_total') or 0) for x in clients_data)
+    nb_sorted = sorted(x.get('nb_achats') or 0 for x in clients_data)
+    ca_p75 = ca_all_sorted[int(len(ca_all_sorted) * 0.75)] if ca_all_sorted else 0
+    nb_p50 = nb_sorted[len(nb_sorted) // 2] if nb_sorted else 0
+
+    # Recence médiane pour les seuils d'inactivité (relative aux données, pas à aujourd'hui)
+    recence_all = []
+    for c in clients_data:
+        try:
+            recence_all.append((ref_date - c['derniere_date']).days if c['derniere_date'] else 999)
+        except Exception:
+            recence_all.append(999)
+    recence_all.sort()
+    recence_p75 = recence_all[int(len(recence_all) * 0.75)] if recence_all else 180
+
     segments = {}
     clients = []
 
     for c in clients_data:
         try:
-            recence_j = (today - c['derniere_date']).days if c['derniere_date'] else 999
+            recence_j = (ref_date - c['derniere_date']).days if c['derniere_date'] else 999
         except Exception:
             recence_j = 999
 
@@ -407,20 +494,7 @@ def api_segmentation_comportementale(request):
         ca_total  = float(c['ca_total'] or 0)
         nb_art    = c['nb_articles'] or 0
 
-        # Segmentation comportementale
-        # Seuils relatifs calculés dynamiquement
-        # (basés sur les percentiles du jeu de données, pas des valeurs absolues)
-        ca_all_vals = [float(x.get('ca_total') or 0) for x in clients_data]
-        nb_achats_all = [x.get('nb_achats') or 0 for x in clients_data]
-        recence_all = []
-
-        ca_all_sorted = sorted(ca_all_vals)
-        nb_sorted = sorted(nb_achats_all)
-
-        ca_p75 = ca_all_sorted[int(len(ca_all_sorted) * 0.75)] if ca_all_sorted else 0
-        nb_p50 = nb_sorted[len(nb_sorted) // 2] if nb_sorted else 0
-
-        # Segmentation adaptée aux données disponibles
+        # Segmentation avec seuils percentiles dynamiques
         if ca_total >= ca_p75 and nb_achats >= nb_p50:
             segment = 'grand_compte'
             label   = 'Grand compte'
@@ -429,11 +503,11 @@ def api_segmentation_comportementale(request):
             segment = 'acheteur_regulier'
             label   = 'Acheteur régulier'
             couleur = '#22c55e'
-        elif recence_j > 365:
+        elif recence_j > recence_p75 * 2:
             segment = 'client_inactif'
             label   = 'Client inactif'
             couleur = '#ef4444'
-        elif recence_j > 180:
+        elif recence_j > recence_p75:
             segment = 'risque_perte'
             label   = 'Risque de perte'
             couleur = '#f97316'
@@ -466,7 +540,6 @@ def api_segmentation_comportementale(request):
             'recence_jours': recence_j,
         })
 
-    # Arrondir les CA des segments
     seg_list = list(segments.values())
     for s in seg_list:
         s['ca_total'] = round(s['ca_total'], 2)
@@ -487,9 +560,17 @@ def api_segmentation_comportementale(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def api_rfm(request):
-    today = date.today()
+    region = request.GET.get('region', 'all')
+    periode = request.GET.get('periode', 'all')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    config_id = request.GET.get('config_id')
+    qs = _base_qs(region=region, periode=periode, config_id=config_id, date_debut=date_debut, date_fin=date_fin)
 
-    client_data = list(DonneeBrute.objects
+    # Ancrer la récence sur la date max des données, pas sur aujourd'hui
+    ref_date = _get_ref_date()
+
+    client_data = list(qs
         .values('code_client', 'nom_client')
         .annotate(
             derniere_transaction=Max('date_transaction'),
@@ -498,17 +579,42 @@ def api_rfm(request):
         )
     )
 
+    if not client_data:
+        return Response({'segments': [], 'top_clients': [], 'total_clients': 0})
+
+    # Calcul des percentiles pour des seuils adaptatifs RFM
+    montants = sorted(float(c['montant'] or 0) for c in client_data)
+    freqs = sorted(c['frequence'] or 0 for c in client_data)
+    recences = []
+    for c in client_data:
+        try:
+            recences.append((ref_date - c['derniere_transaction']).days if c['derniere_transaction'] else 999)
+        except Exception:
+            recences.append(999)
+    recences.sort()
+
+    n = len(client_data)
+    def pct(lst, p): return lst[int(n * p)] if lst else 0
+
+    m_p20, m_p40, m_p60, m_p80 = pct(montants, .2), pct(montants, .4), pct(montants, .6), pct(montants, .8)
+    f_p20, f_p40, f_p60, f_p80 = pct(freqs, .2), pct(freqs, .4), pct(freqs, .6), pct(freqs, .8)
+    r_p20, r_p40, r_p60, r_p80 = pct(recences, .2), pct(recences, .4), pct(recences, .6), pct(recences, .8)
+
     clients = []
     segment_counts = {}
 
     for c in client_data:
-        recence = (today - c['derniere_transaction']).days if c['derniere_transaction'] else 999
+        try:
+            recence = (ref_date - c['derniere_transaction']).days if c['derniere_transaction'] else 999
+        except Exception:
+            recence = 999
         frequence = c['frequence'] or 0
         montant = float(c['montant'] or 0)
 
-        r = 5 if recence <= 30 else 4 if recence <= 60 else 3 if recence <= 90 else 2 if recence <= 180 else 1
-        f = 5 if frequence >= 20 else 4 if frequence >= 10 else 3 if frequence >= 5 else 2 if frequence >= 2 else 1
-        m = 5 if montant >= 500000 else 4 if montant >= 200000 else 3 if montant >= 100000 else 2 if montant >= 50000 else 1
+        # Scores R, F, M sur percentiles (1-5) — adaptatifs aux données
+        r = 5 if recence <= r_p20 else 4 if recence <= r_p40 else 3 if recence <= r_p60 else 2 if recence <= r_p80 else 1
+        f = 5 if frequence >= f_p80 else 4 if frequence >= f_p60 else 3 if frequence >= f_p40 else 2 if frequence >= f_p20 else 1
+        m = 5 if montant >= m_p80 else 4 if montant >= m_p60 else 3 if montant >= m_p40 else 2 if montant >= m_p20 else 1
 
         score = r + f + m
 
@@ -697,10 +803,10 @@ def api_previsions(request):
     - Saisonnalité : ratio mois N vs moyenne annuelle des années précédentes
     - Score qualité : R² ajusté avec interprétation lisible
     """
+    region = request.GET.get('region', 'all')
     config_id = request.GET.get('config_id')
-    qs = DonneeBrute.objects.all()
-    if config_id:
-        qs = qs.filter(config_id=config_id)
+    # Les prévisions portent sur tout l'historique (pas de filtre période)
+    qs = _base_qs(region=region, config_id=config_id)
 
     data = list(qs
         .annotate(mois=TruncMonth('date_transaction'))
@@ -824,10 +930,17 @@ def api_previsions(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def api_alertes(request):
-    alertes = []
-    today = date.today()
+    region = request.GET.get('region', 'all')
+    periode = request.GET.get('periode', 'all')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    config_id = request.GET.get('config_id')
+    qs = _base_qs(region=region, periode=periode, config_id=config_id, date_debut=date_debut, date_fin=date_fin)
 
-    monthly = list(DonneeBrute.objects
+    alertes = []
+    ref_date = _get_ref_date()
+
+    monthly = list(qs
         .annotate(mois=TruncMonth('date_transaction'))
         .values('mois')
         .annotate(ca=Sum('ca_ligne'), nb=Count('id_donnee'))
@@ -841,21 +954,21 @@ def api_alertes(request):
             if ca_m < avg_ca * 0.8 and ca_m > 0:
                 alertes.append({
                     'type': 'Baisse de CA',
-                    'message': f"CA de {m['mois'].strftime('%b %Y')} inférieur de plus de 20% à la moyenne ({avg_ca:,.0f} DZD)",
+                    'message': f"CA de {m['mois'].strftime('%b %Y')} inférieur de plus de 20% à la moyenne ({avg_ca:,.0f} MAD)",
                     'ca': round(ca_m, 2),
                     'nb_commandes': m['nb'],
                     'severite': 'warning',
                 })
 
-    # Articles sans vente ce mois
-    ce_mois = today.replace(day=1)
-    articles_actifs = DonneeBrute.objects.filter(date_transaction__gte=ce_mois).values('code_article').distinct().count()
-    tous_articles = DonneeBrute.objects.values('code_article').distinct().count()
+    # Articles sans vente le dernier mois des données (ancré sur ref_date)
+    dernier_mois = ref_date.replace(day=1)
+    articles_actifs = qs.filter(date_transaction__gte=dernier_mois).values('code_article').distinct().count()
+    tous_articles = qs.values('code_article').distinct().count()
     inactifs = tous_articles - articles_actifs
     if inactifs > 0:
         alertes.append({
             'type': 'Articles sans vente',
-            'message': f"{inactifs} article(s) n'ont pas été vendus ce mois",
+            'message': f"{inactifs} article(s) sans vente en {dernier_mois.strftime('%B %Y')}",
             'ca': 0, 'nb_commandes': 0, 'severite': 'info',
         })
 
