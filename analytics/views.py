@@ -67,11 +67,14 @@ def api_login(request):
         return Response({'refresh': str(refresh), 'access': str(refresh.access_token)})
     return Response({'error': 'Identifiants invalides'}, status=401)
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
 def health_check(request):
+    """Health check - plain Django view (no DRF, no DB, no auth)."""
     from datetime import datetime
-    return Response({'status': 'ok', 'timestamp': datetime.now().isoformat()})
+    return HttpResponse(
+        '{"status":"ok","timestamp":"' + datetime.now().isoformat() + '"}',
+        content_type='application/json',
+        status=200
+    )
 
 
 # ============================================================
