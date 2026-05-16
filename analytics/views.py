@@ -1313,9 +1313,9 @@ def import_etat_data(request):
             }
         )
 
-        # Creer les widgets par defaut si nouvelle config ou si aucun indicateur
+        # Creer les widgets par defaut si aucun widget pour cet admin
         if admin:
-            if created or not IndicateurPersonnalise.objects.filter(created_by=admin).exists():
+            if not WidgetDashboard.objects.filter(created_by=admin).exists():
                 try:
                     _creer_widgets_par_defaut(admin, config)
                 except Exception:
