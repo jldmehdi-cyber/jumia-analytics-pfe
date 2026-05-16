@@ -764,12 +764,12 @@
 
         async function ajouterPreset(type) {
             const presets = {
-                'ca_total': { code: 'ca_total', nom: "Chiffre d'Affaires Total", calc: 'somme', champ: 'ca_ligne', aff: 'montant', icone: 'fa-coins' },
-                'marge_totale': { code: 'marge_totale', nom: 'Marge Totale', calc: 'somme', champ: 'marge_ligne', aff: 'montant', icone: 'fa-chart-pie' },
-                'panier_moyen': { code: 'panier_moyen', nom: 'Panier Moyen', calc: 'formule', champ: '', formule: 'ca / nb_commandes', aff: 'montant', icone: 'fa-shopping-basket' },
-                'taux_conversion': { code: 'taux_conversion', nom: 'Taux de Conversion', calc: 'ratio', champ: '', num: 'achats', den: 'vues', aff: 'pourcentage', icone: 'fa-percentage' },
-                'nb_clients': { code: 'nb_clients', nom: 'Nombre de Clients', calc: 'compte', champ: 'code_client', aff: 'nombre', icone: 'fa-users' },
-                'cac': { code: 'cac', nom: "Coût d'Acquisition", calc: 'formule', champ: '', formule: '100000 / nb_commandes', aff: 'montant', icone: 'fa-bullhorn' }
+                'ca_total':        { code: 'ca_total',        nom: "Chiffre d'Affaires Total", type_calcul: 'somme',    champ_source: 'ca_ligne',    type_affichage: 'montant',      icone: 'fa-coins' },
+                'marge_totale':    { code: 'marge_totale',    nom: 'Marge Totale',              type_calcul: 'somme',    champ_source: 'marge_ligne', type_affichage: 'montant',      icone: 'fa-chart-pie' },
+                'panier_moyen':    { code: 'panier_moyen',    nom: 'Panier Moyen',              type_calcul: 'formule',  champ_source: '',            type_affichage: 'montant',      icone: 'fa-shopping-basket', formule: 'ca / nb_commandes' },
+                'taux_conversion': { code: 'taux_conversion', nom: 'Taux de Conversion',        type_calcul: 'ratio',    champ_source: '',            type_affichage: 'pourcentage',  icone: 'fa-percentage',      champ_numerateur: 'achats', champ_denominateur: 'vues' },
+                'nb_clients':      { code: 'nb_clients',      nom: 'Nombre de Clients',          type_calcul: 'compte',   champ_source: 'code_client', type_affichage: 'nombre',       icone: 'fa-users' },
+                'cac':             { code: 'cac',             nom: "Coût d'Acquisition",         type_calcul: 'formule',  champ_source: '',            type_affichage: 'montant',      icone: 'fa-bullhorn',        formule: '100000 / nb_commandes' }
             };
 
             const p = presets[type];
@@ -779,8 +779,10 @@
             });
 
             if (res && res.id) {
-                showAlert('success', `Indicateur "${p.nom}" ajouté !`);
+                showAlert('success', `Indicateur "${p.nom}" ajouté avec succès !`);
                 loadIndicateurs();
+            } else if (res) {
+                showAlert('error', res.error || 'Erreur lors de l\'ajout du preset');
             }
         }
 
@@ -814,8 +816,10 @@
                 closeModal('indicateur');
                 showAlert('success', 'Indicateur créé avec succès !');
                 loadIndicateurs();
-            } else {
+            } else if (res) {
                 showAlert('error', res.error || 'Erreur lors de la création');
+            } else {
+                showAlert('error', 'Erreur de connexion — veuillez vous reconnecter');
             }
         }
 
@@ -852,12 +856,27 @@
         async function genererCanevas() {
             const configId = document.getElementById('config-select-canevas').value;
             if (!configId) {
-                showAlert('error', 'Sélectionnez une configuration');
+                showAlert('error', 'Créez d\'abord un projet dans l\'onglet "Projet"');
                 return;
             }
 
-            // Récupérer le fichier
-            window.open(`${API_BASE}/configurations/${configId}/canevas/`, '_blank');
+            try {
+                const res = await fetch(`${API_BASE}/configurations/${configId}/canevas/`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!res.ok) { showAlert('error', 'Erreur lors de la génération du canevas'); return; }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `canevas_${configId}.xlsx`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showAlert('success', 'Canevas Excel téléchargé !');
+            } catch (e) {
+                showAlert('error', 'Erreur réseau lors du téléchargement');
+            }
         }
 
         function handleFileSelect(event) {
