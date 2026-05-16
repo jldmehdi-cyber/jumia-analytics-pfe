@@ -1427,11 +1427,14 @@ def setup_railway(request):
         results.append("✅ Migrations appliquées")
 
         User = get_user_model()
-        if not User.objects.filter(username='admin').exists():
-            User.objects.create_superuser('admin', '', 'admin123')
-            results.append("✅ Admin créé (admin / admin123)")
-        else:
-            results.append("ℹ️ Admin existe déjà")
+        admin, created = User.objects.get_or_create(username='admin', defaults={'is_superuser': True, 'is_staff': True, 'email': ''})
+        admin.set_password('admin123')
+        admin.is_superuser = True
+        admin.is_staff = True
+        admin.is_active = True
+        admin.save()
+        action = "créé" if created else "réinitialisé"
+        results.append(f"✅ Admin {action} → login: admin / admin123")
 
         call_command('collectstatic', '--noinput', '--clear')
         results.append("✅ Fichiers statiques collectés")
