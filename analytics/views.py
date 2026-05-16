@@ -398,10 +398,8 @@ def api_segmentation_comportementale(request):
     clients = []
 
     for c in clients_data:
-        recence_j = (today - c['derniere_date']).days if c['derniere_transaction'] else 999 if c.get('derniere_date') is None else (today - c['derniere_date']).days
-        # Gestion correcte de derniere_date
         try:
-            recence_j = (today - c['derniere_date']).days
+            recence_j = (today - c['derniere_date']).days if c['derniere_date'] else 999
         except Exception:
             recence_j = 999
 
