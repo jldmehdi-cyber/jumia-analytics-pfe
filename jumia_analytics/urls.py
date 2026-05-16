@@ -5,12 +5,18 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf.urls.static import static
 from django.conf import settings
-from analytics.views import setup_railway
+
+
+def _setup_railway(request):
+    """Import lazy pour éviter les problèmes de chargement de module."""
+    from analytics.views import setup_railway
+    return setup_railway(request)
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('analytics.urls')),
-    path('setup/', setup_railway, name='setup'),
+    path('setup/', _setup_railway, name='setup'),
     path('', include('analytics.urls')),
 ]
 

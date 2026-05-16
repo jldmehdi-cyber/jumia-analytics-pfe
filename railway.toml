@@ -2,8 +2,8 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn jumia_analytics.wsgi --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120"
+startCommand = "python manage.py migrate --noinput && gunicorn jumia_analytics.wsgi --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120"
 healthcheckPath = "/api/health/"
-healthcheckTimeout = 30
+healthcheckTimeout = 120
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
