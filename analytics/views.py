@@ -1313,6 +1313,15 @@ def import_etat_data(request):
             }
         )
 
+        # Creer les widgets par defaut si nouvelle config ou si aucun indicateur
+        if admin:
+            from analytics.models import IndicateurKPI
+            if created or not IndicateurKPI.objects.filter(config=config).exists():
+                try:
+                    _creer_widgets_par_defaut(admin, config)
+                except Exception:
+                    pass
+
         # Supprimer existants
         DonneeBrute.objects.filter(config=config).delete()
 
