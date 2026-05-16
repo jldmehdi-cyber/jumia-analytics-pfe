@@ -408,26 +408,43 @@ def api_segmentation_comportementale(request):
         nb_art    = c['nb_articles'] or 0
 
         # Segmentation comportementale
-        if recence_j <= 90 and nb_achats >= 10 and nb_art >= 4:
-            segment = 'acheteur_regulier'
-            label   = 'Acheteur régulier'
-            couleur = '#22c55e'
-        elif recence_j <= 90 and ca_total >= 5_000_000:
+        # Seuils relatifs calculés dynamiquement
+        # (basés sur les percentiles du jeu de données, pas des valeurs absolues)
+        ca_all_vals = [float(x.get('ca_total') or 0) for x in clients_data]
+        nb_achats_all = [x.get('nb_achats') or 0 for x in clients_data]
+        recence_all = []
+
+        ca_all_sorted = sorted(ca_all_vals)
+        nb_sorted = sorted(nb_achats_all)
+
+        ca_p75 = ca_all_sorted[int(len(ca_all_sorted) * 0.75)] if ca_all_sorted else 0
+        nb_p50 = nb_sorted[len(nb_sorted) // 2] if nb_sorted else 0
+
+        # Segmentation adaptée aux données disponibles
+        if ca_total >= ca_p75 and nb_achats >= nb_p50:
             segment = 'grand_compte'
             label   = 'Grand compte'
             couleur = '#6366f1'
+        elif nb_achats >= nb_p50 and nb_art >= 3:
+            segment = 'acheteur_regulier'
+            label   = 'Acheteur régulier'
+            couleur = '#22c55e'
         elif recence_j > 365:
             segment = 'client_inactif'
             label   = 'Client inactif'
             couleur = '#ef4444'
-        elif nb_achats <= 3:
-            segment = 'occasionnel'
-            label   = 'Acheteur occasionnel'
-            couleur = '#f59e0b'
-        elif nb_art <= 2:
+        elif recence_j > 180:
+            segment = 'risque_perte'
+            label   = 'Risque de perte'
+            couleur = '#f97316'
+        elif nb_achats < nb_p50 and nb_art <= 2:
             segment = 'specialise'
             label   = 'Client spécialisé'
             couleur = '#06b6d4'
+        elif nb_achats < nb_p50:
+            segment = 'occasionnel'
+            label   = 'Acheteur occasionnel'
+            couleur = '#f59e0b'
         else:
             segment = 'standard'
             label   = 'Client standard'
