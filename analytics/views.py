@@ -813,5 +813,108 @@ def setup_railway(request):
         return JsonResponse({'status': 'success', 'details': results,
                              'credentials': {'username': 'admin', 'password': 'admin123'}})
     except Exception as e:
-        results.append(f"❌ Erreur: {e}")
+        results.append(f"Erreur: {e}")
         return JsonResponse({'status': 'error', 'details': results})
+
+
+# ============================================================
+# IMPORT ETAT DATA (endpoint production)
+# ============================================================
+
+def import_etat_data(request):
+    """
+    Endpoint pour importer les donnees ETAT.xlsx en production.
+    Protege par token secret.
+    """
+    import json
+    from pathlib import Path
+    from django.db import transaction as db_transaction
+    from django.db.models import Sum, Count, Min, Max
+
+    # Verifier le token
+    token = request.GET.get('token', '')
+    expected = os.environ.get('IMPORT_SECRET', 'import-etat-2025')
+    if token != expected:
+        return JsonResponse({'status': 'error', 'message': 'Token invalide'}, status=403)
+
+    try:
+        # Chemin du fichier fixture
+        fixture_path = Path(__file__).resolve().parent.parent / 'analytics' / 'fixtures' / 'etat_data_raw.json'
+
+        if not fixture_path.exists():
+            return JsonResponse({'status': 'error', 'message': f'Fichier introuvable: {fixture_path}'})
+
+        with open(fixture_path, 'r', encoding='utf-8') as f:
+            export = json.load(f)
+
+        donnees = export.get('donnees', [])
+
+        # Recuperer l'admin
+        User = get_user_model()
+        admin = User.objects.filter(is_superuser=True).first()
+
+        from analytics.models import ConfigurationProjet, DonneeBrute
+
+        config, created = ConfigurationProjet.objects.get_or_create(
+            nom_projet='ETAT - Donnees importees',
+            defaults={
+                'description': 'Donnees depuis ETAT.xlsx (2021-2025)',
+                'colonnes_canevas': [],
+                'created_by': admin,
+            }
+        )
+
+        # Supprimer existants
+        DonneeBrute.objects.filter(config=config).delete()
+
+        # Importer
+        batch = []
+        errors = []
+        for d in donnees:
+            try:
+                batch.append(DonneeBrute(
+                    config=config,
+                    date_transaction=d['date_transaction'],
+                    code_client=d.get('code_client', ''),
+                    nom_client=d.get('nom_client', ''),
+                    region=d.get('region', ''),
+                    code_article=d.get('code_article', ''),
+                    nom_article=d.get('nom_article', ''),
+                    categorie=d.get('categorie', ''),
+                    code_commercial=d.get('code_commercial', ''),
+                    nom_commercial=d.get('nom_commercial', ''),
+                    quantite=float(d.get('quantite', 0)),
+                    prix_unitaire=float(d.get('prix_unitaire', 0)),
+                    remise=float(d.get('remise', 0)),
+                    ca_ligne=float(d.get('ca_ligne', 0)),
+                    marge_ligne=float(d.get('marge_ligne', 0)),
+                    champs_personnalises=d.get('champs_personnalises', {}),
+                ))
+            except Exception as e:
+                errors.append(str(e))
+
+        with db_transaction.atomic():
+            DonneeBrute.objects.bulk_create(batch, batch_size=100)
+
+        # Statistiques
+        s = DonneeBrute.objects.filter(config=config).aggregate(
+            ca=Sum('ca_ligne'), nb=Count('id_donnee'),
+            clt=Count('code_client', distinct=True),
+            dmin=Min('date_transaction'), dmax=Max('date_transaction')
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'config_id': config.id_config,
+            'imported': len(batch),
+            'errors': len(errors),
+            'stats': {
+                'ca_total': float(s['ca'] or 0),
+                'transactions': s['nb'],
+                'clients': s['clt'],
+                'periode': f"{s['dmin']} -> {s['dmax']}",
+            }
+        })
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})

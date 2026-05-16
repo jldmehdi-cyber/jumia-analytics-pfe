@@ -54,4 +54,7 @@ urlpatterns = [
     # API Widgets
     path('api/widgets/', views.api_widgets, name='api_widgets'),
     path('api/dashboard-dynamique/', views.api_dashboard_dynamique, name='api_dashboard_dynamique'),
+
+    # Import admin
+    path('api/admin/import-etat/', views.import_etat_data, name='import_etat_data'),
 ]
