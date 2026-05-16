@@ -899,9 +899,46 @@
         }
 
         // ─── Export ───
-        function exportData(format) {
-            const url = `${API_BASE}/export/${format}/`;
-            window.open(url, '_blank');
+        async function exportData(format) {
+            const f = getFilters();
+            const url = `${API_BASE}/export/${format}/?${f}`;
+            const token = localStorage.getItem('jwt_token') || authToken;
+
+            try {
+                const btn = document.querySelector(`button[onclick="exportData('${format}')"]`);
+                if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Export...`; }
+
+                const resp = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    alert(`Erreur export : ${err.detail || resp.status}`);
+                    return;
+                }
+
+                const blob = await resp.blob();
+                const ext = format === 'excel' ? 'xlsx' : 'csv';
+                const filename = `export_jumia_${new Date().toISOString().slice(0,10)}.${ext}`;
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(a.href);
+            } catch(e) {
+                alert('Erreur lors du téléchargement : ' + e.message);
+            } finally {
+                const btn = document.querySelector(`button[onclick="exportData('${format}')"]`);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = format === 'excel'
+                        ? '<i class="fas fa-file-excel"></i> Excel'
+                        : '<i class="fas fa-file-csv"></i> CSV';
+                }
+            }
         }
 
         // ─── Chart Helper ───

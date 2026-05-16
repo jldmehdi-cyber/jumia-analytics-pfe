@@ -984,6 +984,14 @@ def api_alertes(request):
 def api_export_excel(request):
     from openpyxl import Workbook
     from openpyxl.styles import PatternFill, Font
+    from datetime import datetime
+
+    region = request.GET.get('region', 'all')
+    periode = request.GET.get('periode', 'all')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    config_id = request.GET.get('config_id')
+    qs = _base_qs(region=region, periode=periode, config_id=config_id, date_debut=date_debut, date_fin=date_fin)
 
     wb = Workbook()
     ws = wb.active
@@ -999,7 +1007,7 @@ def api_export_excel(request):
         cell.fill = fill
         cell.font = bold_white
 
-    for i, d in enumerate(DonneeBrute.objects.all().order_by('date_transaction'), 2):
+    for d in qs.order_by('date_transaction'):
         ws.append([
             str(d.date_transaction), d.code_client, d.nom_client, d.region,
             d.code_article, d.nom_article, d.categorie,
@@ -1007,8 +1015,19 @@ def api_export_excel(request):
             float(d.ca_ligne), float(d.marge_ligne),
         ])
 
+    # Ajuster la largeur des colonnes
+    for col in ws.columns:
+        max_len = max((len(str(c.value or '')) for c in col), default=10)
+        ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 30)
+
+    suffix = f"_{region}" if region != 'all' else ''
+    suffix += f"_{periode}" if periode not in ('all', '') else ''
+    date_str = datetime.now().strftime('%Y%m%d')
+    filename = f"export_jumia{suffix}_{date_str}.xlsx"
+
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename="export_jumia.xlsx"'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
     wb.save(response)
     return response
 
@@ -1017,12 +1036,27 @@ def api_export_excel(request):
 @permission_classes([IsAuthenticated])
 def api_export_csv(request):
     import csv
+    from datetime import datetime
+
+    region = request.GET.get('region', 'all')
+    periode = request.GET.get('periode', 'all')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    config_id = request.GET.get('config_id')
+    qs = _base_qs(region=region, periode=periode, config_id=config_id, date_debut=date_debut, date_fin=date_fin)
+
+    suffix = f"_{region}" if region != 'all' else ''
+    suffix += f"_{periode}" if periode not in ('all', '') else ''
+    date_str = datetime.now().strftime('%Y%m%d')
+    filename = f"export_jumia{suffix}_{date_str}.csv"
+
     response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
-    response['Content-Disposition'] = 'attachment; filename="export_jumia.csv"'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
     writer = csv.writer(response, delimiter=';')
     writer.writerow(['Date', 'Code Client', 'Nom Client', 'Région', 'Code Article',
                      'Nom Article', 'Catégorie', 'Quantité', 'Prix Unitaire', 'Remise', 'CA', 'Marge'])
-    for d in DonneeBrute.objects.all().order_by('date_transaction'):
+    for d in qs.order_by('date_transaction'):
         writer.writerow([d.date_transaction, d.code_client, d.nom_client, d.region,
                          d.code_article, d.nom_article, d.categorie,
                          d.quantite, d.prix_unitaire, d.remise, d.ca_ligne, d.marge_ligne])
