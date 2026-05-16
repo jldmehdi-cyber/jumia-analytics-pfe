@@ -63,6 +63,9 @@ def api_login(request):
     password = request.data.get('password')
     user = authenticate(username=username, password=password)
     if user:
+        # Créer aussi une session Django → cookie sessionid dans le navigateur
+        # Cela permet l'accès direct aux exports sans token dans l'URL
+        login(request, user)
         refresh = RefreshToken.for_user(user)
         return Response({'refresh': str(refresh), 'access': str(refresh.access_token)})
     return Response({'error': 'Identifiants invalides'}, status=401)
@@ -979,12 +982,26 @@ def api_alertes(request):
 # API EXPORTS
 # ============================================================
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def api_export_excel(request):
+    """Export Excel — accepte JWT Bearer (fetch JS) ET session Django (accès direct navigateur)."""
     from openpyxl import Workbook
     from openpyxl.styles import PatternFill, Font
     from datetime import datetime
+    from rest_framework_simplejwt.authentication import JWTAuthentication
+
+    # Auth : session Django OU JWT Bearer
+    user = getattr(request, 'user', None)
+    if not (user and user.is_authenticated):
+        # Tentative auth JWT manuelle (pour accès direct sans session)
+        try:
+            jwt_auth = JWTAuthentication()
+            auth_result = jwt_auth.authenticate(request)
+            if auth_result:
+                user, _ = auth_result
+            else:
+                return JsonResponse({'detail': 'Non authentifié — connectez-vous d\'abord sur /login/'}, status=401)
+        except Exception:
+            return JsonResponse({'detail': 'Non authentifié — connectez-vous d\'abord sur /login/'}, status=401)
 
     region = request.GET.get('region', 'all')
     periode = request.GET.get('periode', 'all')
@@ -1032,11 +1049,24 @@ def api_export_excel(request):
     return response
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def api_export_csv(request):
+    """Export CSV — accepte JWT Bearer (fetch JS) ET session Django (accès direct navigateur)."""
     import csv
     from datetime import datetime
+    from rest_framework_simplejwt.authentication import JWTAuthentication
+
+    # Auth : session Django OU JWT Bearer
+    user = getattr(request, 'user', None)
+    if not (user and user.is_authenticated):
+        try:
+            jwt_auth = JWTAuthentication()
+            auth_result = jwt_auth.authenticate(request)
+            if auth_result:
+                user, _ = auth_result
+            else:
+                return JsonResponse({'detail': 'Non authentifié — connectez-vous d\'abord sur /login/'}, status=401)
+        except Exception:
+            return JsonResponse({'detail': 'Non authentifié — connectez-vous d\'abord sur /login/'}, status=401)
 
     region = request.GET.get('region', 'all')
     periode = request.GET.get('periode', 'all')
