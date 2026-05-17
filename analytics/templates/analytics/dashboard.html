@@ -931,6 +931,19 @@
                 </div>
             </div>
 
+            <!-- KPIs Personnalisés -->
+            <div id="custom-kpis-section" style="display:none;margin-bottom:24px">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                    <span style="font-size:13px;font-weight:600;color:var(--text2);letter-spacing:.5px;text-transform:uppercase">
+                        <i class="fas fa-sliders-h" style="color:var(--orange);margin-right:6px"></i>KPIs Personnalisés
+                    </span>
+                    <a href="/configurator/" style="font-size:12px;color:var(--orange);text-decoration:none">
+                        <i class="fas fa-cog"></i> Configurer
+                    </a>
+                </div>
+                <div id="custom-kpis-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px"></div>
+            </div>
+
             <!-- Tendance (pleine largeur) -->
             <div class="chart-row cols-1">
                 <div class="card">
@@ -1540,6 +1553,51 @@ function mkChart(id, type, labels, datasets, opts = {}) {
 }
 
 /* ────────────────────────────────
+   KPIs PERSONNALISÉS
+──────────────────────────────── */
+async function loadCustomKPIs() {
+    const f = getFilters();
+    const data = await api(`${API}/kpis-personnalises/?${f}`);
+    const section = document.getElementById('custom-kpis-section');
+    const grid    = document.getElementById('custom-kpis-grid');
+    if (!data || !data.length) { if (section) section.style.display = 'none'; return; }
+
+    const ALERTE_COLOR = { bas: 'var(--red)', haut: 'var(--yellow)' };
+
+    const fmtKpi = (val, type) => {
+        if (val === null || val === undefined) return '—';
+        if (type === 'montant')     return new Intl.NumberFormat('fr-DZ', { maximumFractionDigits: 0 }).format(val) + ' DZD';
+        if (type === 'pourcentage') return parseFloat(val).toFixed(2) + ' %';
+        return parseFloat(val).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+    };
+
+    grid.innerHTML = data.map(kpi => {
+        const alertColor = kpi.alerte ? ALERTE_COLOR[kpi.alerte] : 'transparent';
+        const alertTip   = kpi.alerte === 'bas'  ? `⬇ En dessous du seuil min (${kpi.seuil_min})`
+                         : kpi.alerte === 'haut' ? `⬆ Au dessus du seuil max (${kpi.seuil_max})` : '';
+        return `
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;
+                    position:relative;overflow:hidden;transition:transform .2s;border-bottom:2px solid ${alertColor}"
+             title="${alertTip}">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <div style="width:36px;height:36px;border-radius:10px;background:rgba(249,115,22,.15);
+                            display:flex;align-items:center;justify-content:center;color:var(--orange)">
+                    <i class="fas ${kpi.icone}" style="font-size:15px"></i>
+                </div>
+                ${kpi.alerte ? `<span style="font-size:10px;font-weight:700;color:${ALERTE_COLOR[kpi.alerte]};
+                    background:${ALERTE_COLOR[kpi.alerte]}22;padding:2px 8px;border-radius:8px">
+                    ${kpi.alerte === 'bas' ? '⬇ Bas' : '⬆ Haut'}</span>` : ''}
+            </div>
+            <div style="font-size:22px;font-weight:700;color:var(--text1);margin-bottom:4px">${fmtKpi(kpi.valeur, kpi.type_affichage)}</div>
+            <div style="font-size:13px;font-weight:600;color:var(--text1)">${kpi.nom}</div>
+            ${kpi.description ? `<div style="font-size:12px;color:var(--text2);margin-top:2px">${kpi.description}</div>` : ''}
+        </div>`;
+    }).join('');
+
+    section.style.display = 'block';
+}
+
+/* ────────────────────────────────
    DASHBOARD
 ──────────────────────────────── */
 async function loadDashboard() {
@@ -1551,6 +1609,7 @@ async function loadDashboard() {
         api(`${API}/par-region/?${f}`),
         api(`${API}/par-article/?top=7&${f}`),
     ]);
+    loadCustomKPIs();
 
     if (kpis) {
         animCount('kpi-ca',      kpis.chiffre_affaires, fmt);

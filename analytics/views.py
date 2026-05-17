@@ -1745,6 +1745,136 @@ def api_kpi_par_dimension(request, pk):
 
 
 # ============================================================
+# API KPIs PERSONNALISÉS (dashboard)
+# ============================================================
+
+COLONNES_NUMERIQUES = [
+    {'nom': 'ca_ligne',      'label': 'CA Ligne',       'type': 'montant'},
+    {'nom': 'marge_ligne',   'label': 'Marge Ligne',    'type': 'montant'},
+    {'nom': 'quantite',      'label': 'Quantité',       'type': 'nombre'},
+    {'nom': 'prix_unitaire', 'label': 'Prix Unitaire',  'type': 'montant'},
+    {'nom': 'remise',        'label': 'Remise (%)',      'type': 'pourcentage'},
+]
+
+COLONNES_COMPTE = [
+    {'nom': 'code_client',     'label': 'Clients (distinct)',     'type': 'texte'},
+    {'nom': 'code_article',    'label': 'Articles (distinct)',    'type': 'texte'},
+    {'nom': 'code_commercial', 'label': 'Commerciaux (distinct)', 'type': 'texte'},
+    {'nom': 'region',          'label': 'Régions (distinct)',     'type': 'texte'},
+    {'nom': 'categorie',       'label': 'Catégories (distinct)',  'type': 'texte'},
+]
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def api_colonnes_disponibles(request):
+    """Retourne les colonnes disponibles pour configurer un KPI."""
+    config_id = request.GET.get('config_id')
+    qs = DonneeBrute.objects.all()
+    if config_id:
+        qs = qs.filter(config_id=config_id)
+
+    # Scanner les clés de champs_personnalises
+    perso_keys = set()
+    for d in qs.values_list('champs_personnalises', flat=True)[:200]:
+        if d:
+            perso_keys.update(d.keys())
+
+    champs_perso = [{'nom': k, 'label': k, 'type': 'texte'} for k in sorted(perso_keys)]
+
+    return Response({
+        'colonnes_numeriques': COLONNES_NUMERIQUES,
+        'colonnes_compte': COLONNES_COMPTE,
+        'champs_personnalises': champs_perso,
+    })
+
+
+def _eval_formule_kpi(formule, qs):
+    ca = float(qs.aggregate(r=Sum('ca_ligne'))['r'] or 0)
+    marge = float(qs.aggregate(r=Sum('marge_ligne'))['r'] or 0)
+    nb = qs.aggregate(r=Count('id_donnee'))['r'] or 0
+    qte = float(qs.aggregate(r=Sum('quantite'))['r'] or 0)
+    ctx = {
+        'ca': ca, 'marge': marge, 'nb_commandes': float(nb),
+        'quantite': qte, 'panier_moyen': ca / nb if nb else 0,
+        'round': round, 'abs': abs, 'max': max, 'min': min,
+    }
+    try:
+        return float(eval(formule, {"__builtins__": {}}, ctx))
+    except Exception:
+        return 0
+
+
+def _calculer_indicateur(ind, qs):
+    try:
+        tc = ind.type_calcul
+        champ = ind.champ_source
+        if tc == 'somme':
+            return float(qs.aggregate(r=Sum(champ))['r'] or 0)
+        elif tc == 'moyenne':
+            return float(qs.aggregate(r=Avg(champ))['r'] or 0)
+        elif tc == 'compte':
+            return qs.values(champ).distinct().count()
+        elif tc == 'min':
+            return float(qs.aggregate(r=Min(champ))['r'] or 0)
+        elif tc == 'max':
+            return float(qs.aggregate(r=Max(champ))['r'] or 0)
+        elif tc == 'ratio':
+            num = float(qs.aggregate(r=Sum(ind.champ_numerateur))['r'] or 0)
+            den = float(qs.aggregate(r=Sum(ind.champ_denominateur))['r'] or 1)
+            return round(num / den, 4) if den else 0
+        elif tc == 'formule':
+            return _eval_formule_kpi(ind.formule, qs)
+        return 0
+    except Exception:
+        return None
+
+
+def _check_alerte_kpi(ind, valeur):
+    if valeur is None:
+        return None
+    if ind.seuil_alerte_min is not None and valeur < float(ind.seuil_alerte_min):
+        return 'bas'
+    if ind.seuil_alerte_max is not None and valeur > float(ind.seuil_alerte_max):
+        return 'haut'
+    return None
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def api_kpis_personnalises(request):
+    """Calcule tous les KPIs personnalisés de l'utilisateur avec les filtres du dashboard."""
+    region = request.GET.get('region', 'all')
+    periode = request.GET.get('periode', 'all')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    config_id = request.GET.get('config_id')
+
+    qs = _base_qs(region=region, periode=periode, config_id=config_id,
+                  date_debut=date_debut, date_fin=date_fin)
+    inds = (IndicateurPersonnalise.objects
+            .filter(created_by=request.user, visible=True)
+            .order_by('ordre_affichage', 'nom'))
+
+    results = []
+    for ind in inds:
+        valeur = _calculer_indicateur(ind, qs)
+        results.append({
+            'id': ind.id_indicateur,
+            'nom': ind.nom,
+            'description': ind.description,
+            'type_affichage': ind.type_affichage,
+            'icone': ind.icone,
+            'valeur': valeur,
+            'alerte': _check_alerte_kpi(ind, valeur),
+            'seuil_min': float(ind.seuil_alerte_min) if ind.seuil_alerte_min is not None else None,
+            'seuil_max': float(ind.seuil_alerte_max) if ind.seuil_alerte_max is not None else None,
+        })
+
+    return Response(results)
+
+
+# ============================================================
 # API CONFIGURATIONS PROJET
 # ============================================================
 

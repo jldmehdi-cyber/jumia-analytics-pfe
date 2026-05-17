@@ -408,90 +408,83 @@
         <!-- Tabs -->
         <div class="tabs">
             <div class="tab active" onclick="showTab('indicateurs')">
-                <i class="fas fa-sliders-h"></i> Mes Indicateurs
-            </div>
-            <div class="tab" onclick="showTab('canevas')">
-                <i class="fas fa-file-excel"></i> Canevas de Saisie
-            </div>
-            <div class="tab" onclick="showTab('widgets')">
-                <i class="fas fa-th-large"></i> Widgets
-            </div>
-            <div class="tab" onclick="showTab('projet')">
-                <i class="fas fa-project-diagram"></i> Projet
+                <i class="fas fa-sliders-h"></i> KPIs Personnalisés
             </div>
         </div>
 
-        <!-- Tab: Indicateurs -->
+        <!-- Tab: KPIs Personnalisés -->
         <div id="tab-indicateurs" class="tab-content active">
+            <div class="help-text" style="margin-bottom:20px">
+                <i class="fas fa-info-circle"></i>
+                Les KPIs personnalisés s'affichent sur le dashboard en complément des KPIs obligatoires (CA, Marge, Transactions, Clients).
+                Définissez le nom, la fonction de calcul et la colonne source pour chaque indicateur.
+            </div>
             <div class="grid-2">
                 <div class="card">
-                    <h2><i class="fas fa-list"></i> Mes Indicateurs</h2>
+                    <h2><i class="fas fa-sliders-h" style="color:var(--accent)"></i> Mes KPIs</h2>
                     <div id="indicateurs-list">
-                        <p style="color: var(--text-secondary); text-align: center; padding: 40px;">
-                            Chargement...
-                        </p>
+                        <p style="color:var(--text-secondary);text-align:center;padding:40px;">Chargement...</p>
                     </div>
-                    <button class="btn btn-primary" style="margin-top: 16px; width: 100%;" onclick="openModal('indicateur')">
-                        <i class="fas fa-plus"></i> Ajouter un Indicateur
+                    <button class="btn btn-primary" style="margin-top:16px;width:100%;" onclick="ouvrirNouvelIndicateur()">
+                        <i class="fas fa-plus"></i> Nouveau KPI
                     </button>
                 </div>
 
                 <div class="card">
-                    <h2><i class="fas fa-lightbulb"></i> Indicateurs Prédéfinis</h2>
+                    <h2><i class="fas fa-bolt" style="color:var(--accent)"></i> KPIs Prédéfinis</h2>
                     <div class="help-text">
-                        Cliquez sur un indicateur pour l'ajouter à votre configuration.
-                        Vous pourrez ensuite le personnaliser selon vos besoins.
+                        Ajoutez un KPI prédéfini en un clic. Vous pourrez le renommer et l'ajuster.
                     </div>
                     <div id="indicateurs-preset">
-                        <div class="indicateur-item" style="cursor: pointer;" onclick="ajouterPreset('ca_total')">
+                        <div class="indicateur-item" style="cursor:pointer" onclick="ajouterPreset('ca_total')">
                             <div class="indicateur-info">
-                                <h4><i class="fas fa-coins" style="color: var(--accent);"></i> Chiffre d'Affaires Total</h4>
-                                <p>Somme de toutes les lignes de CA</p>
+                                <h4><i class="fas fa-coins" style="color:var(--accent)"></i> CA Total</h4>
+                                <p>Somme de ca_ligne</p>
                             </div>
-                            <i class="fas fa-plus-circle" style="color: var(--success);"></i>
+                            <i class="fas fa-plus-circle" style="color:var(--success)"></i>
                         </div>
-                        <div class="indicateur-item" style="cursor: pointer;" onclick="ajouterPreset('marge_totale')">
+                        <div class="indicateur-item" style="cursor:pointer" onclick="ajouterPreset('marge_totale')">
                             <div class="indicateur-info">
-                                <h4><i class="fas fa-chart-pie" style="color: var(--success);"></i> Marge Totale</h4>
-                                <p>Somme des marges sur toutes les lignes</p>
+                                <h4><i class="fas fa-chart-pie" style="color:var(--success)"></i> Marge Totale</h4>
+                                <p>Somme de marge_ligne</p>
                             </div>
-                            <i class="fas fa-plus-circle" style="color: var(--success);"></i>
+                            <i class="fas fa-plus-circle" style="color:var(--success)"></i>
                         </div>
-                        <div class="indicateur-item" style="cursor: pointer;" onclick="ajouterPreset('panier_moyen')">
+                        <div class="indicateur-item" style="cursor:pointer" onclick="ajouterPreset('panier_moyen')">
                             <div class="indicateur-info">
-                                <h4><i class="fas fa-shopping-basket" style="color: #3b82f6;"></i> Panier Moyen</h4>
-                                <p>CA moyen par commande</p>
+                                <h4><i class="fas fa-shopping-basket" style="color:#3b82f6"></i> Panier Moyen</h4>
+                                <p>ca ÷ nb_commandes</p>
                             </div>
-                            <i class="fas fa-plus-circle" style="color: var(--success);"></i>
+                            <i class="fas fa-plus-circle" style="color:var(--success)"></i>
                         </div>
-                        <div class="indicateur-item" style="cursor: pointer;" onclick="ajouterPreset('taux_conversion')">
+                        <div class="indicateur-item" style="cursor:pointer" onclick="ajouterPreset('taux_marge')">
                             <div class="indicateur-info">
-                                <h4><i class="fas fa-percentage" style="color: #8b5cf6;"></i> Taux de Conversion</h4>
-                                <p>Ratio achats / vues produits</p>
+                                <h4><i class="fas fa-percentage" style="color:#8b5cf6"></i> Taux de Marge</h4>
+                                <p>marge ÷ ca × 100</p>
                             </div>
-                            <i class="fas fa-plus-circle" style="color: var(--success);"></i>
+                            <i class="fas fa-plus-circle" style="color:var(--success)"></i>
                         </div>
-                        <div class="indicateur-item" style="cursor: pointer;" onclick="ajouterPreset('nb_clients')">
+                        <div class="indicateur-item" style="cursor:pointer" onclick="ajouterPreset('nb_clients')">
                             <div class="indicateur-info">
-                                <h4><i class="fas fa-users" style="color: #eab308;"></i> Nombre de Clients</h4>
-                                <p>Compte distinct des clients</p>
+                                <h4><i class="fas fa-users" style="color:#eab308"></i> Nb Clients Distincts</h4>
+                                <p>Compte distinct code_client</p>
                             </div>
-                            <i class="fas fa-plus-circle" style="color: var(--success);"></i>
+                            <i class="fas fa-plus-circle" style="color:var(--success)"></i>
                         </div>
-                        <div class="indicateur-item" style="cursor: pointer;" onclick="ajouterPreset('cac')">
+                        <div class="indicateur-item" style="cursor:pointer" onclick="ajouterPreset('nb_articles')">
                             <div class="indicateur-info">
-                                <h4><i class="fas fa-bullhorn" style="color: #ec4899;"></i> Coût d'Acquisition (CAC)</h4>
-                                <p>Coût marketing / nouveaux clients</p>
+                                <h4><i class="fas fa-box" style="color:#06b6d4"></i> Quantité Totale</h4>
+                                <p>Somme des quantités vendues</p>
                             </div>
-                            <i class="fas fa-plus-circle" style="color: var(--success);"></i>
+                            <i class="fas fa-plus-circle" style="color:var(--success)"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Tab: Canevas -->
-        <div id="tab-canevas" class="tab-content">
+        <!-- Tab: Canevas (supprimé) -->
+        <div id="tab-canevas" class="tab-content" style="display:none!important">
 
             <!-- ══ Constructeur de canevas ══ -->
             <div class="card" style="margin-bottom:20px">
@@ -703,221 +696,131 @@
             </div>
         </div>
 
-        <!-- Tab: Widgets -->
-        <div id="tab-widgets" class="tab-content">
-            <div class="card">
-                <h2><i class="fas fa-th-large"></i> Configuration des Widgets</h2>
-                <div class="help-text">
-                    Les widgets sont les blocs visuels de votre dashboard. 
-                    Associez chaque widget à un indicateur et choisissez son type d'affichage.
-                </div>
-
-                <div id="widgets-list">
-                    <p style="color: var(--text-secondary); text-align: center; padding: 40px;">
-                        Créez d'abord des indicateurs dans l'onglet "Mes Indicateurs"
-                    </p>
-                </div>
-
-                <button class="btn btn-primary" onclick="openModal('widget')">
-                    <i class="fas fa-plus"></i> Ajouter un Widget
-                </button>
-            </div>
-        </div>
-
-        <!-- Tab: Projet -->
-        <div id="tab-projet" class="tab-content">
-            <div class="grid-2">
-                <div class="card">
-                    <h2><i class="fas fa-project-diagram"></i> Configuration du Projet</h2>
-
-                    <div class="form-group">
-                        <label>Nom du projet</label>
-                        <input type="text" id="projet-nom" placeholder="Mon Dashboard Analytics">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Description</label>
-                        <textarea id="projet-desc" rows="3" placeholder="Description du projet..."></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Couleur du thème</label>
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            <input type="color" id="projet-couleur" value="#f97316" style="width: 60px; height: 40px; padding: 4px;">
-                            <input type="text" id="projet-couleur-hex" value="#f97316" style="width: 100px;">
-                        </div>
-                    </div>
-
-                    <button class="btn btn-primary" onclick="sauvegarderProjet()">
-                        <i class="fas fa-save"></i> Sauvegarder
-                    </button>
-                </div>
-
-                <div class="card">
-                    <h2><i class="fas fa-info-circle"></i> Résumé</h2>
-                    <div id="projet-resume">
-                        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border);">
-                            <span style="color: var(--text-secondary);">Indicateurs configurés</span>
-                            <span id="resume-nb-indicateurs" style="font-weight: 600;">0</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border);">
-                            <span style="color: var(--text-secondary);">Widgets créés</span>
-                            <span id="resume-nb-widgets" style="font-weight: 600;">0</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border);">
-                            <span style="color: var(--text-secondary);">Données importées</span>
-                            <span id="resume-nb-donnees" style="font-weight: 600;">0</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; padding: 12px 0;">
-                            <span style="color: var(--text-secondary);">Dernière mise à jour</span>
-                            <span id="resume-derniere-maj" style="font-weight: 600;">-</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- Widgets & Projet supprimés -->
     </div>
 
-    <!-- Modal: Ajouter Indicateur -->
+    <!-- Modal: KPI Personnalisé -->
     <div class="modal-overlay" id="modal-indicateur">
-        <div class="modal">
+        <div class="modal" style="max-width:680px">
             <div class="modal-header">
-                <h3><i class="fas fa-plus-circle"></i> Nouvel Indicateur</h3>
+                <h3 id="modal-ind-title"><i class="fas fa-plus-circle"></i> Nouveau KPI</h3>
                 <button class="close-btn" onclick="closeModal('indicateur')">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label>Code unique *</label>
-                    <input type="text" id="ind-code" placeholder="ex: ca_total">
-                    <small>Identifiant technique, sans espaces</small>
-                </div>
-                <div class="form-group">
-                    <label>Nom d'affichage *</label>
-                    <input type="text" id="ind-nom" placeholder="ex: Chiffre d'Affaires Total">
-                </div>
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea id="ind-desc" rows="2" placeholder="Description de l'indicateur..."></textarea>
-                </div>
+                <input type="hidden" id="ind-edit-id">
+
                 <div class="two-cols">
                     <div class="form-group">
-                        <label>Type de calcul *</label>
-                        <select id="ind-type-calc">
-                            <option value="somme">Somme</option>
-                            <option value="moyenne">Moyenne</option>
-                            <option value="compte">Compte distinct</option>
+                        <label>Nom du KPI *</label>
+                        <input type="text" id="ind-nom" placeholder="ex: CA par Commercial">
+                    </div>
+                    <div class="form-group">
+                        <label>Icône</label>
+                        <select id="ind-icone">
+                            <option value="fa-chart-line">📈 Tendance</option>
+                            <option value="fa-chart-bar">📊 Barres</option>
+                            <option value="fa-chart-pie">🥧 Circulaire</option>
+                            <option value="fa-coins">💰 Montant</option>
+                            <option value="fa-users">👥 Clients</option>
+                            <option value="fa-shopping-basket">🛒 Panier</option>
+                            <option value="fa-percentage">% Pourcentage</option>
+                            <option value="fa-trophy">🏆 Performance</option>
+                            <option value="fa-box">📦 Articles</option>
+                            <option value="fa-briefcase">💼 Commercial</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Description <span style="color:var(--text-secondary);font-weight:400">(optionnel)</span></label>
+                    <input type="text" id="ind-desc" placeholder="Brève description de ce KPI">
+                </div>
+
+                <div class="two-cols">
+                    <div class="form-group">
+                        <label>Fonction de calcul *</label>
+                        <select id="ind-type-calc" onchange="onCalcTypeChange()">
+                            <option value="somme">Somme (∑)</option>
+                            <option value="moyenne">Moyenne (Ø)</option>
+                            <option value="compte">Compte distinct (#)</option>
                             <option value="min">Minimum</option>
                             <option value="max">Maximum</option>
-                            <option value="ratio">Ratio</option>
-                            <option value="pourcentage">Pourcentage</option>
+                            <option value="ratio">Ratio (A ÷ B)</option>
                             <option value="formule">Formule personnalisée</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Type d'affichage *</label>
+                        <label>Format d'affichage *</label>
                         <select id="ind-type-aff">
                             <option value="montant">Montant (DZD)</option>
-                            <option value="nombre">Nombre</option>
-                            <option value="pourcentage">Pourcentage</option>
+                            <option value="nombre">Nombre entier</option>
+                            <option value="pourcentage">Pourcentage (%)</option>
                             <option value="duree">Durée (jours)</option>
-                            <option value="texte">Texte</option>
                         </select>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>Champ source *</label>
-                    <input type="text" id="ind-champ" placeholder="ex: ca_ligne">
-                    <small>Nom du champ dans la base de données</small>
-                </div>
-                <div class="form-group" id="formule-group" style="display: none;">
-                    <label>Formule personnalisée</label>
-                    <textarea id="ind-formule" rows="2" placeholder="ex: ca / nb_commandes"></textarea>
-                    <small>Variables disponibles: ca, marge, nb_commandes, quantite, panier_moyen</small>
-                </div>
-                <div class="two-cols" id="ratio-group" style="display: none;">
-                    <div class="form-group">
-                        <label>Numérateur</label>
-                        <input type="text" id="ind-num" placeholder="Champ numérateur">
-                    </div>
-                    <div class="form-group">
-                        <label>Dénominateur</label>
-                        <input type="text" id="ind-den" placeholder="Champ dénominateur">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Seuils d'alerte (optionnel)</label>
-                    <div class="seuil-inputs">
-                        <input type="number" id="ind-seuil-min" placeholder="Min">
-                        <input type="number" id="ind-seuil-max" placeholder="Max">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Icône</label>
-                    <select id="ind-icone">
-                        <option value="fa-chart-line">📈 Ligne</option>
-                        <option value="fa-chart-bar">📊 Barres</option>
-                        <option value="fa-chart-pie">🥧 Circulaire</option>
-                        <option value="fa-coins">🪙 Monnaie</option>
-                        <option value="fa-users">👥 Utilisateurs</option>
-                        <option value="fa-shopping-basket">🛒 Panier</option>
-                        <option value="fa-percentage">% Pourcentage</option>
-                        <option value="fa-trophy">🏆 Performance</option>
+
+                <!-- Champ source (somme / moyenne / min / max) -->
+                <div class="form-group" id="grp-champ">
+                    <label>Colonne à calculer *</label>
+                    <select id="ind-champ">
+                        <option value="">— chargement des colonnes —</option>
                     </select>
+                    <small id="grp-champ-hint">Choisissez la colonne numérique à agréger</small>
+                </div>
+
+                <!-- Champ compte -->
+                <div class="form-group" id="grp-compte" style="display:none">
+                    <label>Colonne à compter (distinct) *</label>
+                    <select id="ind-champ-compte">
+                        <option value="">— chargement —</option>
+                    </select>
+                    <small>Compte le nombre de valeurs uniques dans cette colonne</small>
+                </div>
+
+                <!-- Ratio -->
+                <div class="two-cols" id="grp-ratio" style="display:none">
+                    <div class="form-group">
+                        <label>Numérateur (∑ colonne A) *</label>
+                        <select id="ind-num">
+                            <option value="">— chargement —</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Dénominateur (∑ colonne B) *</label>
+                        <select id="ind-den">
+                            <option value="">— chargement —</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Formule -->
+                <div class="form-group" id="grp-formule" style="display:none">
+                    <label>Formule *</label>
+                    <textarea id="ind-formule" rows="2" placeholder="ex: marge / ca * 100"></textarea>
+                    <small>
+                        Variables disponibles :
+                        <code style="color:var(--accent)">ca</code>,
+                        <code style="color:var(--accent)">marge</code>,
+                        <code style="color:var(--accent)">nb_commandes</code>,
+                        <code style="color:var(--accent)">quantite</code>,
+                        <code style="color:var(--accent)">panier_moyen</code>
+                    </small>
+                </div>
+
+                <!-- Seuils -->
+                <div class="form-group">
+                    <label>Seuils d'alerte <span style="color:var(--text-secondary);font-weight:400">(optionnel)</span></label>
+                    <div class="seuil-inputs">
+                        <input type="number" id="ind-seuil-min" placeholder="⬇ Seuil minimum (alerte si inférieur)">
+                        <input type="number" id="ind-seuil-max" placeholder="⬆ Seuil maximum (alerte si supérieur)">
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-outline" onclick="closeModal('indicateur')">Annuler</button>
                 <button class="btn btn-primary" onclick="sauvegarderIndicateur()">
-                    <i class="fas fa-save"></i> Créer l'indicateur
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: Ajouter Widget -->
-    <div class="modal-overlay" id="modal-widget">
-        <div class="modal">
-            <div class="modal-header">
-                <h3><i class="fas fa-plus-circle"></i> Nouveau Widget</h3>
-                <button class="close-btn" onclick="closeModal('widget')">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Nom du widget *</label>
-                    <input type="text" id="widget-nom" placeholder="ex: CA par Région">
-                </div>
-                <div class="form-group">
-                    <label>Type de visualisation *</label>
-                    <select id="widget-type">
-                        <option value="kpi_card">Carte KPI (valeur simple)</option>
-                        <option value="line_chart">Graphique ligne (tendance)</option>
-                        <option value="bar_chart">Graphique barres (comparaison)</option>
-                        <option value="pie_chart">Graphique circulaire (répartition)</option>
-                        <option value="table">Tableau de données</option>
-                        <option value="gauge">Jauge (seuils)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Indicateur associé *</label>
-                    <select id="widget-indicateur">
-                        <option value="">Chargement...</option>
-                    </select>
-                </div>
-                <div class="two-cols">
-                    <div class="form-group">
-                        <label>Largeur (1-12)</label>
-                        <input type="number" id="widget-largeur" value="6" min="1" max="12">
-                    </div>
-                    <div class="form-group">
-                        <label>Hauteur (1-12)</label>
-                        <input type="number" id="widget-hauteur" value="4" min="1" max="12">
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal('widget')">Annuler</button>
-                <button class="btn btn-primary" onclick="sauvegarderWidget()">
-                    <i class="fas fa-save"></i> Créer le widget
+                    <i class="fas fa-save"></i> <span id="btn-save-label">Créer le KPI</span>
                 </button>
             </div>
         </div>
@@ -927,7 +830,7 @@
         const API_BASE = '/api';
         let authToken = localStorage.getItem('jwt_token');
         let indicateurs = [];
-        let configurations = [];
+        let colonnesDisponibles = { colonnes_numeriques: [], colonnes_compte: [], champs_personnalises: [] };
 
         if (!authToken) window.location.href = '/login/';
 
@@ -941,6 +844,7 @@
                 }
             });
             if (res.status === 401) { logout(); return null; }
+            if (res.status === 204) return {};
             return res.json();
         }
 
@@ -955,11 +859,43 @@
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.getElementById(`tab-${tabId}`).classList.add('active');
             event.target.closest('.tab').classList.add('active');
-
             if (tabId === 'indicateurs') loadIndicateurs();
-            if (tabId === 'canevas') loadConfigurations();
-            if (tabId === 'widgets') loadWidgets();
-            if (tabId === 'projet') loadProjetResume();
+        }
+
+        // ─── Colonnes disponibles ───
+        async function loadColonnes() {
+            const data = await apiFetch(`${API_BASE}/colonnes/`);
+            if (!data) return;
+            colonnesDisponibles = data;
+            refreshColonneSelects();
+        }
+
+        function refreshColonneSelects() {
+            const { colonnes_numeriques, colonnes_compte, champs_personnalises } = colonnesDisponibles;
+            const allNumeriques = [...colonnes_numeriques, ...champs_personnalises];
+
+            const makeOpts = (list) => list.map(c =>
+                `<option value="${c.nom}">${c.label}</option>`
+            ).join('');
+
+            const selChamp   = document.getElementById('ind-champ');
+            const selCompte  = document.getElementById('ind-champ-compte');
+            const selNum     = document.getElementById('ind-num');
+            const selDen     = document.getElementById('ind-den');
+
+            if (selChamp)  selChamp.innerHTML  = makeOpts(allNumeriques) || '<option value="">Aucune colonne disponible</option>';
+            if (selCompte) selCompte.innerHTML = makeOpts(colonnes_compte) || '<option value="">Aucune colonne</option>';
+            if (selNum)    selNum.innerHTML    = makeOpts(allNumeriques);
+            if (selDen)    selDen.innerHTML    = makeOpts(allNumeriques);
+        }
+
+        // ─── Calcul type → afficher les bons champs ───
+        function onCalcTypeChange() {
+            const tc = document.getElementById('ind-type-calc').value;
+            document.getElementById('grp-champ').style.display   = ['somme','moyenne','min','max'].includes(tc) ? 'block' : 'none';
+            document.getElementById('grp-compte').style.display  = tc === 'compte'  ? 'block' : 'none';
+            document.getElementById('grp-ratio').style.display   = tc === 'ratio'   ? 'grid'  : 'none';
+            document.getElementById('grp-formule').style.display = tc === 'formule' ? 'block' : 'none';
         }
 
         // ─── Indicateurs ───
@@ -971,22 +907,31 @@
             const container = document.getElementById('indicateurs-list');
             if (data.length === 0) {
                 container.innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
-                        <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 16px; display: block;"></i>
-                        Aucun indicateur configuré.<br>
-                        Ajoutez-en un ou choisissez un prédéfini.
+                    <div style="text-align:center;padding:40px;color:var(--text-secondary);">
+                        <i class="fas fa-inbox" style="font-size:48px;margin-bottom:16px;display:block;"></i>
+                        Aucun KPI configuré.<br>Cliquez sur <strong>+ Nouveau KPI</strong> ou choisissez un prédéfini.
                     </div>`;
                 return;
             }
 
+            const CALC_LABELS = {
+                somme:'Somme', moyenne:'Moyenne', compte:'Compte distinct',
+                min:'Minimum', max:'Maximum', ratio:'Ratio', formule:'Formule'
+            };
+            const AFF_LABELS = { montant:'DZD', nombre:'Nombre', pourcentage:'%', duree:'jours' };
+
             container.innerHTML = data.map(ind => `
                 <div class="indicateur-item">
                     <div class="indicateur-info">
-                        <h4><i class="fas ${ind.icone}" style="color: var(--accent); margin-right: 8px;"></i> ${ind.nom}</h4>
-                        <p>${ind.description || 'Pas de description'} • ${ind.type_calcul} • ${ind.type_affichage}</p>
+                        <h4><i class="fas ${ind.icone}" style="color:var(--accent);margin-right:8px;"></i>${ind.nom}</h4>
+                        <p style="margin-top:3px">
+                            ${ind.description ? ind.description + ' &nbsp;·&nbsp; ' : ''}
+                            <span style="color:var(--accent)">${CALC_LABELS[ind.type_calcul] || ind.type_calcul}</span>
+                            &nbsp;·&nbsp; Affiché en <em>${AFF_LABELS[ind.type_affichage] || ind.type_affichage}</em>
+                        </p>
                     </div>
                     <div class="indicateur-actions">
-                        <button class="icon-btn" onclick="testerIndicateur(${ind.id})" title="Tester">
+                        <button class="icon-btn" onclick="testerKPI(${ind.id})" title="Tester la valeur">
                             <i class="fas fa-play"></i>
                         </button>
                         <button class="icon-btn" onclick="editerIndicateur(${ind.id})" title="Modifier">
@@ -1000,460 +945,165 @@
             `).join('');
         }
 
-        async function ajouterPreset(type) {
-            const presets = {
-                'ca_total':        { code: 'ca_total',        nom: "Chiffre d'Affaires Total", type_calcul: 'somme',    champ_source: 'ca_ligne',    type_affichage: 'montant',      icone: 'fa-coins' },
-                'marge_totale':    { code: 'marge_totale',    nom: 'Marge Totale',              type_calcul: 'somme',    champ_source: 'marge_ligne', type_affichage: 'montant',      icone: 'fa-chart-pie' },
-                'panier_moyen':    { code: 'panier_moyen',    nom: 'Panier Moyen',              type_calcul: 'formule',  champ_source: '',            type_affichage: 'montant',      icone: 'fa-shopping-basket', formule: 'ca / nb_commandes' },
-                'taux_conversion': { code: 'taux_conversion', nom: 'Taux de Conversion',        type_calcul: 'ratio',    champ_source: '',            type_affichage: 'pourcentage',  icone: 'fa-percentage',      champ_numerateur: 'achats', champ_denominateur: 'vues' },
-                'nb_clients':      { code: 'nb_clients',      nom: 'Nombre de Clients',          type_calcul: 'compte',   champ_source: 'code_client', type_affichage: 'nombre',       icone: 'fa-users' },
-                'cac':             { code: 'cac',             nom: "Coût d'Acquisition",         type_calcul: 'formule',  champ_source: '',            type_affichage: 'montant',      icone: 'fa-bullhorn',        formule: '100000 / nb_commandes' }
-            };
+        function ouvrirNouvelIndicateur() {
+            document.getElementById('ind-edit-id').value = '';
+            document.getElementById('modal-ind-title').innerHTML = '<i class="fas fa-plus-circle"></i> Nouveau KPI';
+            document.getElementById('btn-save-label').textContent = 'Créer le KPI';
+            document.getElementById('ind-nom').value = '';
+            document.getElementById('ind-desc').value = '';
+            document.getElementById('ind-type-calc').value = 'somme';
+            document.getElementById('ind-type-aff').value = 'montant';
+            document.getElementById('ind-icone').value = 'fa-chart-line';
+            document.getElementById('ind-formule').value = '';
+            document.getElementById('ind-seuil-min').value = '';
+            document.getElementById('ind-seuil-max').value = '';
+            onCalcTypeChange();
+            openModal('indicateur');
+        }
 
-            const p = presets[type];
-            const res = await apiFetch(`${API_BASE}/indicateurs/`, {
-                method: 'POST',
-                body: JSON.stringify(p)
-            });
+        function editerIndicateur(id) {
+            const ind = indicateurs.find(i => i.id === id);
+            if (!ind) return;
 
-            if (res && res.id) {
-                showAlert('success', `Indicateur "${p.nom}" ajouté avec succès !`);
-                loadIndicateurs();
-            } else if (res) {
-                showAlert('error', res.error || 'Erreur lors de l\'ajout du preset');
-            }
+            document.getElementById('ind-edit-id').value = id;
+            document.getElementById('modal-ind-title').innerHTML = '<i class="fas fa-edit"></i> Modifier le KPI';
+            document.getElementById('btn-save-label').textContent = 'Enregistrer';
+            document.getElementById('ind-nom').value = ind.nom;
+            document.getElementById('ind-desc').value = ind.description || '';
+            document.getElementById('ind-type-calc').value = ind.type_calcul;
+            document.getElementById('ind-type-aff').value = ind.type_affichage;
+            document.getElementById('ind-icone').value = ind.icone;
+            document.getElementById('ind-formule').value = ind.formule || '';
+            document.getElementById('ind-seuil-min').value = ind.seuil_alerte_min || '';
+            document.getElementById('ind-seuil-max').value = ind.seuil_alerte_max || '';
+            onCalcTypeChange();
+
+            // Pré-sélectionner les colonnes
+            setTimeout(() => {
+                if (ind.champ_source) {
+                    const s1 = document.getElementById('ind-champ');
+                    const s2 = document.getElementById('ind-champ-compte');
+                    if (s1) s1.value = ind.champ_source;
+                    if (s2) s2.value = ind.champ_source;
+                }
+                if (ind.champ_numerateur) document.getElementById('ind-num').value = ind.champ_numerateur;
+                if (ind.champ_denominateur) document.getElementById('ind-den').value = ind.champ_denominateur;
+            }, 50);
+
+            openModal('indicateur');
         }
 
         async function sauvegarderIndicateur() {
-            const data = {
-                code: document.getElementById('ind-code').value,
-                nom: document.getElementById('ind-nom').value,
+            const editId  = document.getElementById('ind-edit-id').value;
+            const tc      = document.getElementById('ind-type-calc').value;
+            const nom     = document.getElementById('ind-nom').value.trim();
+
+            if (!nom) { showAlert('error', 'Le nom du KPI est obligatoire'); return; }
+
+            // Résoudre le champ source selon le type de calcul
+            let champSource = '', champNum = '', champDen = '', formule = '';
+            if (['somme','moyenne','min','max'].includes(tc)) {
+                champSource = document.getElementById('ind-champ').value;
+                if (!champSource) { showAlert('error', 'Choisissez une colonne à calculer'); return; }
+            } else if (tc === 'compte') {
+                champSource = document.getElementById('ind-champ-compte').value;
+                if (!champSource) { showAlert('error', 'Choisissez une colonne à compter'); return; }
+            } else if (tc === 'ratio') {
+                champNum = document.getElementById('ind-num').value;
+                champDen = document.getElementById('ind-den').value;
+                if (!champNum || !champDen) { showAlert('error', 'Choisissez les deux colonnes du ratio'); return; }
+            } else if (tc === 'formule') {
+                formule = document.getElementById('ind-formule').value.trim();
+                if (!formule) { showAlert('error', 'Saisissez une formule'); return; }
+            }
+
+            const payload = {
+                nom,
                 description: document.getElementById('ind-desc').value,
-                type_calcul: document.getElementById('ind-type-calc').value,
+                type_calcul: tc,
                 type_affichage: document.getElementById('ind-type-aff').value,
-                champ_source: document.getElementById('ind-champ').value,
-                formule: document.getElementById('ind-formule').value,
-                champ_numerateur: document.getElementById('ind-num').value,
-                champ_denominateur: document.getElementById('ind-den').value,
+                champ_source: champSource,
+                champ_numerateur: champNum,
+                champ_denominateur: champDen,
+                formule,
                 seuil_alerte_min: document.getElementById('ind-seuil-min').value || null,
                 seuil_alerte_max: document.getElementById('ind-seuil-max').value || null,
                 icone: document.getElementById('ind-icone').value,
             };
 
-            if (!data.code || !data.nom) {
-                showAlert('error', 'Code et nom sont obligatoires');
-                return;
-            }
-
-            const res = await apiFetch(`${API_BASE}/indicateurs/`, {
-                method: 'POST',
-                body: JSON.stringify(data)
-            });
-
-            if (res && res.id) {
-                closeModal('indicateur');
-                showAlert('success', 'Indicateur créé avec succès !');
-                loadIndicateurs();
-            } else if (res) {
-                showAlert('error', res.error || 'Erreur lors de la création');
+            let res;
+            if (editId) {
+                res = await apiFetch(`${API_BASE}/indicateurs/${editId}/`, { method: 'PUT', body: JSON.stringify(payload) });
+                if (res && res.id) {
+                    closeModal('indicateur');
+                    showAlert('success', 'KPI modifié avec succès !');
+                    loadIndicateurs();
+                } else {
+                    showAlert('error', (res && res.error) || 'Erreur lors de la modification');
+                }
             } else {
-                showAlert('error', 'Erreur de connexion — veuillez vous reconnecter');
+                // Générer un code unique
+                payload.code = nom.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now();
+                res = await apiFetch(`${API_BASE}/indicateurs/`, { method: 'POST', body: JSON.stringify(payload) });
+                if (res && res.id) {
+                    closeModal('indicateur');
+                    showAlert('success', 'KPI créé avec succès !');
+                    loadIndicateurs();
+                } else {
+                    showAlert('error', (res && res.error) || 'Erreur lors de la création');
+                }
             }
         }
 
         async function supprimerIndicateur(id) {
-            if (!confirm('Supprimer cet indicateur ?')) return;
-            const res = await apiFetch(`${API_BASE}/indicateurs/${id}/`, { method: 'DELETE' });
-            if (res) {
-                showAlert('success', 'Indicateur supprimé');
-                loadIndicateurs();
-            }
+            if (!confirm('Supprimer ce KPI ?')) return;
+            await apiFetch(`${API_BASE}/indicateurs/${id}/`, { method: 'DELETE' });
+            showAlert('success', 'KPI supprimé');
+            loadIndicateurs();
         }
 
-        async function testerIndicateur(id) {
+        async function testerKPI(id) {
             const res = await apiFetch(`${API_BASE}/indicateurs/${id}/calculer/`, {
                 method: 'POST',
                 body: JSON.stringify({})
             });
             if (res && res.valeur !== undefined) {
-                alert(`${res.indicateur.nom}\nValeur: ${formatValue(res.valeur, res.indicateur.type_affichage)}`);
-            }
-        }
-
-        // ─── Canevas ───
-        async function loadConfigurations() {
-            const data = await apiFetch(`${API_BASE}/configurations/`);
-            if (!data) return;
-            configurations = data;
-
-            const options = data.map(c => `<option value="${c.id}">${c.nom}</option>`).join('');
-            const selImport = document.getElementById('config-select-import');
-            if (selImport) selImport.innerHTML = options || '<option value="">Aucune config</option>';
-        }
-
-        /* ════════════════════════════════════════
-           CANEVAS BUILDER
-        ════════════════════════════════════════ */
-
-        // Colonnes obligatoires (toujours présentes)
-        const OBLIG_COLS = [
-            { nom: 'Date',          type: 'date',    obligatoire: true,  description: 'Date de la transaction (YYYY-MM-DD)' },
-            { nom: 'Code Client',   type: 'texte',   obligatoire: true,  description: 'Code unique du client' },
-            { nom: 'Code Article',  type: 'texte',   obligatoire: true,  description: 'Code unique de l\'article' },
-            { nom: 'Quantité',      type: 'nombre',  obligatoire: true,  description: 'Quantité vendue' },
-            { nom: 'Prix Unitaire', type: 'montant', obligatoire: true,  description: 'Prix unitaire (MAD)' },
-        ];
-
-        // Colonnes optionnelles standard avec leur label UI
-        const OPT_COLS_META = {
-            'Nom Client':      { type: 'texte',        description: 'Nom complet du client' },
-            'Région':          { type: 'texte',        description: 'Région géographique' },
-            'Nom Article':     { type: 'texte',        description: 'Désignation de l\'article' },
-            'Catégorie':       { type: 'texte',        description: 'Catégorie produit' },
-            'Code Commercial': { type: 'texte',        description: 'Code du commercial' },
-            'Nom Commercial':  { type: 'texte',        description: 'Nom du commercial' },
-            'Remise (%)':      { type: 'pourcentage',  description: 'Taux de remise (%)' },
-            'Marge Ligne':     { type: 'montant',      description: 'Marge brute par ligne (MAD)' },
-        };
-
-        let persoColCount = 0;
-
-        // Toggle tout un groupe (clic sur le header)
-        function toggleGroupe(group) {
-            const grp = document.querySelector(`.col-group[data-group="${group}"]`);
-            if (!grp) return;
-            const cbs = grp.querySelectorAll('.col-toggle:not(.locked) input[type=checkbox]');
-            if (!cbs.length) return;
-            const allChecked = [...cbs].every(cb => cb.checked);
-            cbs.forEach(cb => { cb.checked = !allChecked; });
-            updatePreview();
-        }
-
-        // Ordre canonique des colonnes (reflète l'ordre visuel des groupes)
-        const COL_ORDER = [
-            'Date',
-            'Code Client', 'Nom Client', 'Région',
-            'Code Article', 'Nom Article', 'Catégorie',
-            'Code Commercial', 'Nom Commercial',
-            'Quantité', 'Prix Unitaire', 'Remise (%)', 'Marge Ligne',
-        ];
-
-        function getSelectedCols() {
-            // Collecter toutes les colonnes actives (locked + cochées)
-            const activeNames = new Set();
-
-            // Obligatoires toujours là
-            OBLIG_COLS.forEach(c => activeNames.add(c.nom));
-
-            // Optionnelles cochées
-            document.querySelectorAll('.col-toggle:not(.locked) input[type=checkbox]').forEach(cb => {
-                if (cb.checked) {
-                    const nom = cb.closest('.col-toggle').dataset.col;
-                    if (nom) activeNames.add(nom);
-                }
-            });
-
-            // Construire dans l'ordre canonique
-            const cols = [];
-            COL_ORDER.forEach(nom => {
-                if (!activeNames.has(nom)) return;
-                const oblig = OBLIG_COLS.find(c => c.nom === nom);
-                if (oblig) {
-                    cols.push(oblig);
-                } else {
-                    const meta = OPT_COLS_META[nom] || { type: 'texte', description: '' };
-                    cols.push({ nom, type: meta.type, obligatoire: false, description: meta.description });
-                }
-            });
-
-            // Colonnes personnalisées à la fin
-            document.querySelectorAll('.perso-row').forEach(row => {
-                const nom  = row.querySelector('.perso-nom').value.trim();
-                const type = row.querySelector('.perso-type').value;
-                const req  = row.querySelector('.perso-req').checked;
-                if (nom) cols.push({ nom, type, obligatoire: req, description: 'Champ personnalisé' });
-            });
-
-            return cols;
-        }
-
-        function updatePreview() {
-            const cols = getSelectedCols();
-            const table = document.getElementById('preview-table');
-
-            const EXEMPLES = {
-                'Date':             '2024-01-15',
-                'Code Client':      'CLT001',
-                'Nom Client':       'Entreprise Alpha',
-                'Région':           'Alger',
-                'Code Article':     'ART001',
-                'Nom Article':      'Produit A',
-                'Catégorie':        'Électronique',
-                'Code Commercial':  'COM001',
-                'Nom Commercial':   'Ahmed Benali',
-                'Quantité':         '5',
-                'Prix Unitaire':    '10 000',
-                'Remise (%)':       '10',
-                'Marge Ligne':      '2 500',
-            };
-
-            const isOblig = (col) => OBLIG_COLS.some(o => o.nom === col.nom);
-            const isPerso = (col) => !OBLIG_COLS.some(o => o.nom === col.nom) && !OPT_COLS_META[col.nom];
-
-            const headerRow = cols.map(c => {
-                const cls = isOblig(c) ? 'oblig' : isPerso(c) ? 'perso' : 'opt';
-                const obligMark = c.obligatoire ? ' <span style="color:#f97316">*</span>' : '';
-                return `<th class="${cls}">${c.nom}${obligMark}</th>`;
-            }).join('');
-
-            const exRow = cols.map(c => {
-                const val = EXEMPLES[c.nom] || (c.type === 'date' ? '2024-01-15' : c.type === 'nombre' ? '1' : c.type === 'montant' ? '1 000' : 'Exemple');
-                return `<td>${val}</td>`;
-            }).join('');
-
-            const emptyRow = cols.map(() => `<td style="color:var(--text-secondary);font-style:italic;font-size:11px">à remplir</td>`).join('');
-
-            table.innerHTML = `
-                <thead><tr>${headerRow}</tr></thead>
-                <tbody>
-                    <tr>${exRow}</tr>
-                    <tr>${emptyRow}</tr>
-                </tbody>`;
-        }
-
-        function ajouterColonnePerso() {
-            persoColCount++;
-            const id = `perso-${persoColCount}`;
-            const msg = document.getElementById('no-perso-msg');
-            if (msg) msg.style.display = 'none';
-
-            const row = document.createElement('div');
-            row.className = 'perso-row';
-            row.id = id;
-            row.innerHTML = `
-                <input type="text" class="perso-nom" placeholder="Nom de la colonne (ex: Zone de livraison)" oninput="updatePreview()">
-                <select class="perso-type" onchange="updatePreview()">
-                    <option value="texte">Texte</option>
-                    <option value="nombre">Nombre</option>
-                    <option value="montant">Montant</option>
-                    <option value="date">Date</option>
-                    <option value="pourcentage">Pourcentage</option>
-                </select>
-                <label class="req-toggle">
-                    <input type="checkbox" class="perso-req" onchange="updatePreview()">
-                    Obligatoire
-                </label>
-                <button class="del-col-btn" onclick="supprimerColonnePerso('${id}')">
-                    <i class="fas fa-times"></i>
-                </button>`;
-
-            document.getElementById('colonnes-perso').appendChild(row);
-            updatePreview();
-        }
-
-        function supprimerColonnePerso(id) {
-            const el = document.getElementById(id);
-            if (el) el.remove();
-            const container = document.getElementById('colonnes-perso');
-            if (!container.children.length) {
-                const msg = document.getElementById('no-perso-msg');
-                if (msg) msg.style.display = 'block';
-            }
-            updatePreview();
-        }
-
-        async function genererCanevasLibre() {
-            const cols = getSelectedCols();
-            if (!cols.length) { showAlert('error', 'Aucune colonne sélectionnée'); return; }
-
-            const nomFichier = document.getElementById('canvas-filename').value.trim() || 'mon_canevas';
-            const btn = document.getElementById('btn-gen');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner" style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite"></span> Génération…';
-
-            try {
-                const res = await fetch('/api/canevas/generer/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`,
-                    },
-                    body: JSON.stringify({ colonnes: cols, nom_fichier: nomFichier }),
-                });
-
-                if (!res.ok) {
-                    const err = await res.json().catch(() => ({}));
-                    showAlert('error', err.detail || 'Erreur lors de la génération');
-                    return;
-                }
-
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${nomFichier}.xlsx`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                showAlert('success', `Canevas "${nomFichier}.xlsx" téléchargé ! (${cols.length} colonnes)`);
-            } catch (e) {
-                showAlert('error', 'Erreur réseau : ' + e.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-download"></i> Générer & Télécharger';
-            }
-        }
-
-        // Ancienne fonction conservée pour compatibilité (onglet Projet)
-        async function genererCanevas() { genererCanevasLibre(); }
-
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            importerFichier(file);
-        }
-
-        async function importerFichier(file) {
-            const configId = document.getElementById('config-select-import').value;
-            if (!configId) {
-                showAlert('error', 'Sélectionnez une configuration');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const res = await fetch(`${API_BASE}/configurations/${configId}/importer/`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${authToken}` },
-                body: formData
-            });
-
-            const data = await res.json();
-            const resultDiv = document.getElementById('import-result');
-
-            if (data.imported !== undefined) {
-                resultDiv.innerHTML = `
-                    <div class="alert alert-success show">
-                        <i class="fas fa-check-circle"></i> 
-                        ${data.imported} lignes importées avec succès !
-                        ${data.errors.length > 0 ? `<br><small>${data.errors.length} erreurs</small>` : ''}
-                    </div>
-                `;
+                const ind = indicateurs.find(i => i.id === id);
+                const label = ind ? ind.nom : 'KPI';
+                const val   = formatValue(res.valeur, res.indicateur ? res.indicateur.type_affichage : 'nombre');
+                showAlert('success', `${label} = ${val}`);
             } else {
-                resultDiv.innerHTML = `
-                    <div class="alert alert-error show">
-                        <i class="fas fa-exclamation-circle"></i> ${data.error || 'Erreur d'import'}
-                    </div>
-                `;
+                showAlert('error', 'Impossible de calculer la valeur (pas de données ?)');
             }
         }
 
-        // ─── Widgets ───
-        async function loadWidgets() {
-            const widgets = await apiFetch(`${API_BASE}/widgets/`);
-            const container = document.getElementById('widgets-list');
-
-            if (!widgets || widgets.length === 0) {
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
-                        <i class="fas fa-th-large" style="font-size: 48px; margin-bottom: 16px; display: block;"></i>
-                        Aucun widget configuré.
-                    </div>`;
-                return;
-            }
-
-            container.innerHTML = widgets.map(w => `
-                <div class="indicateur-item">
-                    <div class="indicateur-info">
-                        <h4><i class="fas fa-th" style="color: var(--accent); margin-right: 8px;"></i> ${w.nom}</h4>
-                        <p>${w.type} • ${w.indicateur || 'Sans indicateur'} • ${w.taille.w}x${w.taille.h}</p>
-                    </div>
-                    <div class="indicateur-actions">
-                        <button class="icon-btn delete" onclick="supprimerWidget(${w.id})" title="Supprimer">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-
-            // Charger les indicateurs pour le select
-            const indSelect = document.getElementById('widget-indicateur');
-            indSelect.innerHTML = indicateurs.map(i => 
-                `<option value="${i.id}">${i.nom}</option>`
-            ).join('');
-        }
-
-        async function sauvegarderWidget() {
-            const data = {
-                nom: document.getElementById('widget-nom').value,
-                type_widget: document.getElementById('widget-type').value,
-                indicateur_id: document.getElementById('widget-indicateur').value,
-                largeur: parseInt(document.getElementById('widget-largeur').value),
-                hauteur: parseInt(document.getElementById('widget-hauteur').value),
+        // ─── Presets ───
+        async function ajouterPreset(type) {
+            const presets = {
+                'ca_total':     { nom:"Chiffre d'Affaires Total", type_calcul:'somme',   champ_source:'ca_ligne',    type_affichage:'montant',     icone:'fa-coins',           description:'Somme de toutes les lignes de CA' },
+                'marge_totale': { nom:'Marge Totale',             type_calcul:'somme',   champ_source:'marge_ligne', type_affichage:'montant',     icone:'fa-chart-pie',       description:'Somme des marges sur toutes les lignes' },
+                'panier_moyen': { nom:'Panier Moyen',             type_calcul:'formule', champ_source:'',            type_affichage:'montant',     icone:'fa-shopping-basket', description:'CA moyen par commande', formule:'ca / nb_commandes' },
+                'nb_clients':   { nom:'Nombre de Clients',        type_calcul:'compte',  champ_source:'code_client', type_affichage:'nombre',      icone:'fa-users',           description:'Compte distinct des clients' },
+                'taux_marge':   { nom:'Taux de Marge',            type_calcul:'formule', champ_source:'',            type_affichage:'pourcentage', icone:'fa-percentage',      description:'Marge / CA × 100', formule:'marge / ca * 100 if ca else 0' },
+                'nb_articles':  { nom:"Nombre d'Articles vendus", type_calcul:'somme',   champ_source:'quantite',    type_affichage:'nombre',      icone:'fa-box',             description:'Total des quantités vendues' },
             };
 
-            if (!data.nom || !data.indicateur_id) {
-                showAlert('error', 'Nom et indicateur sont obligatoires');
-                return;
-            }
+            const p = presets[type];
+            if (!p) return;
+            p.code = p.nom.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now();
 
-            const res = await apiFetch(`${API_BASE}/widgets/`, {
-                method: 'POST',
-                body: JSON.stringify(data)
-            });
-
+            const res = await apiFetch(`${API_BASE}/indicateurs/`, { method: 'POST', body: JSON.stringify(p) });
             if (res && res.id) {
-                closeModal('widget');
-                showAlert('success', 'Widget créé !');
-                loadWidgets();
-            }
-        }
-
-        async function supprimerWidget(id) {
-            if (!confirm('Supprimer ce widget ?')) return;
-            // Endpoint DELETE à ajouter si besoin
-            showAlert('success', 'Widget supprimé');
-            loadWidgets();
-        }
-
-        // ─── Projet ───
-        async function loadProjetResume() {
-            const inds = await apiFetch(`${API_BASE}/indicateurs/`);
-            const widgets = await apiFetch(`${API_BASE}/widgets/`);
-
-            document.getElementById('resume-nb-indicateurs').textContent = inds ? inds.length : 0;
-            document.getElementById('resume-nb-widgets').textContent = widgets ? widgets.length : 0;
-            document.getElementById('resume-derniere-maj').textContent = new Date().toLocaleDateString('fr-FR');
-        }
-
-        async function sauvegarderProjet() {
-            const data = {
-                nom: document.getElementById('projet-nom').value,
-                description: document.getElementById('projet-desc').value,
-                theme: document.getElementById('projet-couleur').value,
-            };
-
-            const res = await apiFetch(`${API_BASE}/configurations/`, {
-                method: 'POST',
-                body: JSON.stringify(data)
-            });
-
-            if (res && res.id) {
-                showAlert('success', 'Projet sauvegardé !');
-                loadConfigurations();
+                showAlert('success', `KPI "${p.nom}" ajouté !`);
+                loadIndicateurs();
+            } else {
+                showAlert('error', (res && res.error) || "Erreur lors de l'ajout");
             }
         }
 
         // ─── UI Helpers ───
-        function openModal(name) {
-            document.getElementById(`modal-${name}`).classList.add('active');
-        }
-
-        function closeModal(name) {
-            document.getElementById(`modal-${name}`).classList.remove('active');
-        }
+        function openModal(name) { document.getElementById(`modal-${name}`).classList.add('active'); }
+        function closeModal(name) { document.getElementById(`modal-${name}`).classList.remove('active'); }
 
         function showAlert(type, msg) {
             const el = document.getElementById(`alert-${type}`);
@@ -1463,36 +1113,16 @@
         }
 
         function formatValue(val, type) {
-            if (type === 'montant') return new Intl.NumberFormat('fr-DZ', { style: 'currency', currency: 'DZD' }).format(val);
-            if (type === 'pourcentage') val.toFixed(2) + '%';
-            return val.toLocaleString('fr-FR');
+            if (val === null || val === undefined) return '—';
+            if (type === 'montant')     return new Intl.NumberFormat('fr-DZ', { style:'currency', currency:'DZD', maximumFractionDigits:0 }).format(val);
+            if (type === 'pourcentage') return parseFloat(val).toFixed(2) + ' %';
+            return parseFloat(val).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
         }
-
-        // Drag & drop
-        const dropZone = document.getElementById('drop-zone');
-        if (dropZone) {
-            dropZone.addEventListener('click', () => document.getElementById('file-input').click());
-            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--accent)'; });
-            dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = 'var(--border)'; });
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.style.borderColor = 'var(--border)';
-                const files = e.dataTransfer.files;
-                if (files.length) importerFichier(files[0]);
-            });
-        }
-
-        // Type calc change
-        document.getElementById('ind-type-calc').addEventListener('change', function() {
-            document.getElementById('formule-group').style.display = this.value === 'formule' ? 'block' : 'none';
-            document.getElementById('ratio-group').style.display = this.value === 'ratio' ? 'grid' : 'none';
-        });
 
         // Init
         document.addEventListener('DOMContentLoaded', () => {
+            loadColonnes();
             loadIndicateurs();
-            loadConfigurations();
-            updatePreview(); // initialise le tableau de prévisualisation
         });
     </script>
 </body>

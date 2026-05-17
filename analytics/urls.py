@@ -48,6 +48,10 @@ urlpatterns = [
     path('api/indicateurs/<int:pk>/', views.api_indicateur_detail, name='api_indicateur_detail'),
     path('api/indicateurs/<int:pk>/calculer/', views.api_calculer_kpi, name='api_calculer_kpi'),
     path('api/indicateurs/<int:pk>/par-dimension/', views.api_kpi_par_dimension, name='api_kpi_par_dimension'),
+
+    # API KPIs personnalisés dashboard
+    path('api/kpis-personnalises/', views.api_kpis_personnalises, name='api_kpis_personnalises'),
+    path('api/colonnes/', views.api_colonnes_disponibles, name='api_colonnes_disponibles'),
     
     # API Configurations
     path('api/configurations/', views.api_configurations, name='api_configurations'),
