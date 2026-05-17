@@ -535,98 +535,220 @@
         .chat-input input:focus { border-color: var(--orange); }
 
         /* ══════════════════════════════
-           IMPORT MODAL
+           MODAL CANEVAS + IMPORT
         ══════════════════════════════ */
         .import-modal-overlay {
             position: fixed; inset: 0; z-index: 800;
-            background: rgba(0,0,0,.65);
+            background: rgba(0,0,0,.7);
             display: flex; align-items: center; justify-content: center;
-            opacity: 0; pointer-events: none;
-            transition: opacity .2s;
+            opacity: 0; pointer-events: none; transition: opacity .2s;
         }
         .import-modal-overlay.open { opacity: 1; pointer-events: all; }
 
         .import-modal {
             background: var(--bg2); border: 1px solid var(--border);
-            border-radius: 18px; width: 90%; max-width: 580px;
-            box-shadow: 0 24px 60px rgba(0,0,0,.6);
-            transform: translateY(20px);
-            transition: transform .25s;
+            border-radius: 18px; width: 95%; max-width: 720px;
+            max-height: 92vh; display: flex; flex-direction: column;
+            box-shadow: 0 28px 70px rgba(0,0,0,.65);
+            transform: translateY(24px); transition: transform .25s;
         }
         .import-modal-overlay.open .import-modal { transform: translateY(0); }
 
-        .import-modal-hdr {
-            padding: 20px 24px; border-bottom: 1px solid var(--border);
-            display: flex; align-items: center; justify-content: space-between;
+        /* Header */
+        .im-hdr {
+            padding: 18px 24px 0; border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
         }
-        .import-modal-hdr h3 {
+        .im-hdr-top {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 14px;
+        }
+        .im-hdr-top h3 {
             display: flex; align-items: center; gap: 10px;
             font-size: 16px; font-weight: 700;
         }
-        .import-modal-body { padding: 24px; }
+        .im-close {
+            background: none; border: none; color: var(--text2);
+            font-size: 24px; cursor: pointer; line-height: 1; padding: 0 4px;
+        }
+        .im-close:hover { color: var(--text1); }
 
+        /* Tabs */
+        .im-tabs { display: flex; gap: 0; }
+        .im-tab {
+            padding: 10px 20px; font-size: 13px; font-weight: 600;
+            color: var(--text2); border-bottom: 2px solid transparent;
+            cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 7px;
+        }
+        .im-tab:hover { color: var(--text1); }
+        .im-tab.active { color: var(--orange); border-bottom-color: var(--orange); }
+        .im-tab-badge {
+            font-size: 10px; background: var(--bg3); padding: 1px 6px;
+            border-radius: 10px; font-weight: 700;
+        }
+
+        /* Body */
+        .im-body { flex: 1; overflow-y: auto; padding: 22px 24px; }
+        .im-panel { display: none; }
+        .im-panel.active { display: block; }
+
+        /* ── Canevas builder ── */
+        .cb-step-label {
+            font-size: 11px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .8px; color: var(--text3); margin-bottom: 10px;
+        }
+
+        /* Colonnes obligatoires */
+        .cb-mandatory {
+            display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 18px;
+        }
+        .cb-mandatory-chip {
+            display: flex; align-items: center; gap: 6px;
+            background: rgba(249,115,22,.12); border: 1px solid rgba(249,115,22,.3);
+            color: var(--orange); border-radius: 20px;
+            padding: 4px 12px; font-size: 12px; font-weight: 600;
+        }
+        .cb-mandatory-chip i { font-size: 10px; }
+
+        /* Groupes optionnels */
+        .cb-groups { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+        .cb-group {
+            background: var(--bg3); border: 1px solid var(--border);
+            border-radius: 10px; overflow: hidden;
+        }
+        .cb-group-hdr {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 14px; cursor: pointer;
+            font-size: 13px; font-weight: 600;
+            user-select: none;
+        }
+        .cb-group-hdr:hover { background: rgba(255,255,255,.03); }
+        .cb-group-hdr .gh-toggle {
+            margin-left: auto; font-size: 11px; color: var(--text3);
+            font-weight: 400;
+        }
+        .cb-group-cols {
+            padding: 6px 14px 10px;
+            display: flex; flex-wrap: wrap; gap: 8px;
+        }
+        .cb-col-toggle {
+            display: flex; align-items: center; gap: 6px;
+            background: var(--bg4); border: 1px solid var(--border);
+            border-radius: 8px; padding: 5px 11px;
+            cursor: pointer; transition: all .15s;
+            font-size: 12px; user-select: none;
+        }
+        .cb-col-toggle input { accent-color: var(--orange); width: 13px; height: 13px; cursor: pointer; }
+        .cb-col-toggle:has(input:checked) {
+            background: rgba(249,115,22,.1); border-color: rgba(249,115,22,.3); color: var(--orange);
+        }
+        .cb-col-badge {
+            font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 6px;
+            text-transform: uppercase;
+        }
+        .cb-type-texte  { background: rgba(59,130,246,.15); color: #3b82f6; }
+        .cb-type-nombre { background: rgba(34,197,94,.15);  color: #22c55e; }
+        .cb-type-montant{ background: rgba(234,179,8,.15);  color: #eab308; }
+        .cb-type-pct    { background: rgba(139,92,246,.15); color: #8b5cf6; }
+
+        /* Colonnes perso */
+        .cb-perso-row {
+            display: grid; grid-template-columns: 1fr 110px 28px;
+            gap: 6px; align-items: center; margin-bottom: 6px;
+        }
+        .cb-perso-row input[type=text],
+        .cb-perso-row select {
+            background: var(--bg3); border: 1px solid var(--border);
+            color: var(--text1); padding: 6px 10px;
+            border-radius: 7px; font-size: 12px; font-family: inherit;
+        }
+        .cb-perso-row input:focus, .cb-perso-row select:focus {
+            outline: none; border-color: var(--orange);
+        }
+        .cb-del-btn {
+            width: 28px; height: 28px; border-radius: 7px;
+            border: 1px solid rgba(239,68,68,.3);
+            background: rgba(239,68,68,.08); color: var(--red);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 12px;
+        }
+        .cb-del-btn:hover { background: rgba(239,68,68,.2); }
+
+        /* Aperçu colonnes */
+        .cb-preview {
+            overflow-x: auto; margin-top: 16px;
+            border: 1px solid var(--border); border-radius: 10px;
+        }
+        .cb-preview table { border-collapse: collapse; white-space: nowrap; width: 100%; }
+        .cb-preview th {
+            padding: 7px 13px; font-size: 11px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .4px;
+            border-right: 1px solid var(--border);
+        }
+        .cb-preview th.oblig { background: rgba(249,115,22,.18); color: var(--orange); }
+        .cb-preview th.opt   { background: var(--bg3); color: var(--text2); }
+        .cb-preview th.perso { background: rgba(6,182,212,.12); color: var(--cyan); }
+        .cb-preview td {
+            padding: 6px 13px; font-size: 11px; color: var(--text3);
+            font-style: italic; border-right: 1px solid var(--border);
+        }
+
+        /* Filename + generate */
+        .cb-generate-row {
+            display: flex; gap: 8px; align-items: center; margin-top: 16px;
+        }
+        .cb-generate-row input {
+            flex: 1; background: var(--bg3); border: 1px solid var(--border);
+            color: var(--text1); padding: 9px 13px; border-radius: 9px;
+            font-size: 13px; font-family: inherit;
+        }
+        .cb-generate-row input:focus { outline: none; border-color: var(--orange); }
+
+        /* ── Import panel ── */
         .drop-zone {
             border: 2px dashed var(--border); border-radius: 14px;
-            padding: 40px 24px; text-align: center;
-            cursor: pointer; transition: all .2s;
-            background: var(--bg3);
+            padding: 36px 24px; text-align: center;
+            cursor: pointer; transition: all .2s; background: var(--bg3);
         }
         .drop-zone:hover, .drop-zone.drag-over {
-            border-color: var(--orange); background: rgba(249,115,22,.06);
+            border-color: var(--orange); background: rgba(249,115,22,.05);
         }
-        .drop-zone i { font-size: 44px; color: var(--orange); margin-bottom: 12px; display: block; }
-        .drop-zone h4 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
-        .drop-zone p  { font-size: 13px; color: var(--text2); }
-        .drop-zone .file-types {
-            display: flex; gap: 8px; justify-content: center; margin-top: 12px;
-        }
-        .file-type-badge {
-            font-size: 11px; font-weight: 600; padding: 3px 10px;
+        .drop-zone i { font-size: 40px; color: var(--orange); margin-bottom: 10px; display: block; }
+        .drop-zone h4 { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+        .drop-zone p  { font-size: 12px; color: var(--text2); }
+        .dz-badges { display: flex; gap: 7px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+        .dz-badge {
+            font-size: 11px; font-weight: 600; padding: 2px 9px;
             border-radius: 20px; border: 1px solid;
         }
-        .file-type-badge.xlsx { background: rgba(34,197,94,.1); color: var(--green); border-color: rgba(34,197,94,.3); }
-        .file-type-badge.csv  { background: rgba(59,130,246,.1); color: var(--blue);  border-color: rgba(59,130,246,.3); }
+        .dz-badge.g { background: rgba(34,197,94,.1); color: var(--green); border-color: rgba(34,197,94,.3); }
+        .dz-badge.b { background: rgba(59,130,246,.1); color: var(--blue);  border-color: rgba(59,130,246,.3); }
 
-        .import-progress {
-            margin-top: 20px; display: none;
-        }
         .progress-bar-wrap {
-            height: 6px; background: var(--bg4); border-radius: 3px; overflow: hidden; margin: 8px 0;
+            height: 5px; background: var(--bg4); border-radius: 3px; overflow: hidden; margin: 6px 0;
         }
         .progress-bar-fill {
             height: 100%; border-radius: 3px;
             background: linear-gradient(90deg, var(--orange), var(--yellow));
-            transition: width .4s ease;
+            transition: width .35s ease; width: 0%;
         }
 
         .import-result-card {
-            margin-top: 16px; padding: 16px 18px;
-            border-radius: 12px; border: 1px solid;
-            display: none;
+            margin-top: 14px; padding: 14px 16px;
+            border-radius: 12px; border: 1px solid; display: none;
         }
         .import-result-card.success { background: rgba(34,197,94,.07); border-color: rgba(34,197,94,.25); }
         .import-result-card.error   { background: rgba(239,68,68,.07);  border-color: rgba(239,68,68,.25); }
-
-        .result-stats {
-            display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 12px;
-        }
-        .result-stat { text-align: center; }
-        .result-stat .val { font-size: 24px; font-weight: 800; }
-        .result-stat .lbl { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .4px; }
-
-        .detected-cols {
-            display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;
-        }
+        .result-stats { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 10px; }
+        .result-stat .val { font-size: 22px; font-weight: 800; }
+        .result-stat .lbl { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: .4px; }
+        .detected-cols { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
         .col-chip {
-            font-size: 11px; padding: 2px 9px; border-radius: 20px;
+            font-size: 10px; padding: 2px 8px; border-radius: 20px;
             background: var(--bg4); color: var(--text2); border: 1px solid var(--border);
         }
         .col-chip.mapped { background: rgba(34,197,94,.1); color: var(--green); border-color: rgba(34,197,94,.25); }
-
-        .error-list {
-            margin-top: 10px; font-size: 12px; color: var(--red);
-            max-height: 100px; overflow-y: auto;
-        }
+        .error-list { margin-top: 8px; font-size: 11px; color: var(--red); max-height: 80px; overflow-y: auto; }
 
         /* ══════════════════════════════
            LOADING
@@ -1023,74 +1145,210 @@
     </div><!-- /content -->
 </main>
 
-<!-- ═══════════ IMPORT MODAL ═══════════ -->
+<!-- ═══════════ MODAL CANEVAS + IMPORT ═══════════ -->
 <div class="import-modal-overlay" id="import-overlay" onclick="closeImportModal(event)">
-    <div class="import-modal" onclick="event.stopPropagation()">
-        <div class="import-modal-hdr">
-            <h3>
-                <span style="width:34px;height:34px;background:rgba(34,197,94,.15);color:var(--green);
-                             border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px">
-                    <i class="fas fa-file-upload"></i>
-                </span>
-                Importer des données
-            </h3>
-            <button style="background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;line-height:1"
-                    onclick="closeImportModal()">×</button>
-        </div>
-        <div class="import-modal-body">
-            <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
-                Déposez votre fichier de données — le système détecte automatiquement les colonnes
-                quelle que soit leur orthographe (<em>Date, date, DATE, Date Transaction…</em>).
-            </p>
+  <div class="import-modal" onclick="event.stopPropagation()">
 
-            <!-- Zone de dépôt -->
-            <div class="drop-zone" id="import-drop-zone"
-                 onclick="document.getElementById('import-file-input').click()"
-                 ondragover="importDragOver(event)"
-                 ondragleave="importDragLeave()"
-                 ondrop="importDrop(event)">
-                <i class="fas fa-cloud-upload-alt"></i>
-                <h4 id="import-drop-label">Déposez votre fichier ici</h4>
-                <p>ou cliquez pour parcourir</p>
-                <div class="file-types">
-                    <span class="file-type-badge xlsx"><i class="fas fa-file-excel"></i> Excel .xlsx</span>
-                    <span class="file-type-badge xlsx"><i class="fas fa-file-excel"></i> Excel .xls</span>
-                    <span class="file-type-badge csv"><i class="fas fa-file-csv"></i> CSV .csv</span>
-                </div>
-                <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv"
-                       style="display:none" onchange="importFileSelected(event)">
-            </div>
-
-            <!-- Progression -->
-            <div class="import-progress" id="import-progress">
-                <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text2)">
-                    <span id="import-progress-label">Envoi en cours…</span>
-                    <span id="import-progress-pct">0%</span>
-                </div>
-                <div class="progress-bar-wrap">
-                    <div class="progress-bar-fill" id="import-progress-bar" style="width:0%"></div>
-                </div>
-            </div>
-
-            <!-- Résultats -->
-            <div class="import-result-card" id="import-result">
-                <div class="result-stats" id="import-result-stats"></div>
-                <div style="font-size:12px;color:var(--text2);margin-bottom:8px">
-                    <strong>Colonnes mappées :</strong>
-                </div>
-                <div class="detected-cols" id="import-detected-cols"></div>
-                <div class="error-list" id="import-error-list"></div>
-            </div>
+    <!-- Header -->
+    <div class="im-hdr">
+      <div class="im-hdr-top">
+        <h3>
+          <span style="width:32px;height:32px;border-radius:9px;display:flex;align-items:center;
+                       justify-content:center;background:rgba(249,115,22,.15);color:var(--orange)">
+            <i class="fas fa-table"></i>
+          </span>
+          Canevas &amp; Import de données
+        </h3>
+        <button class="im-close" onclick="closeImportModal()">×</button>
+      </div>
+      <div class="im-tabs">
+        <div class="im-tab active" id="imtab-canevas" onclick="switchImTab('canevas')">
+          <i class="fas fa-file-excel"></i> 1 · Générer le canevas
         </div>
-        <div style="padding:14px 24px;border-top:1px solid var(--border);
-                    display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:12px;color:var(--text2)">
-                <i class="fas fa-info-circle"></i>
-                Colonnes obligatoires : Date, Code Client, Code Article
-            </span>
-            <button class="btn btn-ghost" onclick="closeImportModal()">Fermer</button>
+        <div class="im-tab" id="imtab-import" onclick="switchImTab('import')">
+          <i class="fas fa-file-upload"></i> 2 · Importer les données
         </div>
+      </div>
     </div>
+
+    <!-- Body -->
+    <div class="im-body">
+
+      <!-- ══ Panel 1 : Canevas Builder ══ -->
+      <div class="im-panel active" id="impanel-canevas">
+
+        <!-- Colonnes obligatoires -->
+        <div class="cb-step-label"><i class="fas fa-lock" style="color:var(--orange)"></i> Colonnes obligatoires — toujours présentes</div>
+        <div class="cb-mandatory">
+          <span class="cb-mandatory-chip"><i class="fas fa-calendar-alt"></i> Date</span>
+          <span class="cb-mandatory-chip"><i class="fas fa-user"></i> Code Client</span>
+          <span class="cb-mandatory-chip"><i class="fas fa-box"></i> Code Article</span>
+          <span class="cb-mandatory-chip"><i class="fas fa-sort-numeric-up"></i> Quantité</span>
+          <span class="cb-mandatory-chip"><i class="fas fa-tag"></i> Prix Unitaire</span>
+        </div>
+
+        <!-- Groupes optionnels -->
+        <div class="cb-step-label"><i class="fas fa-toggle-on" style="color:var(--blue)"></i> Colonnes optionnelles — cochez celles dont vous avez besoin</div>
+        <div class="cb-groups">
+
+          <div class="cb-group">
+            <div class="cb-group-hdr" onclick="cbToggleGroup('client')">
+              <i class="fas fa-user-circle" style="color:#3b82f6"></i>
+              <span style="color:#3b82f6">Client</span>
+              <span class="gh-toggle">cliquer pour tout cocher/décocher</span>
+            </div>
+            <div class="cb-group-cols" id="cbg-client">
+              <label class="cb-col-toggle">
+                <input type="checkbox" checked data-col="Nom Client" data-type="texte" onchange="cbUpdatePreview()">
+                Nom Client <span class="cb-col-badge cb-type-texte">texte</span>
+              </label>
+              <label class="cb-col-toggle">
+                <input type="checkbox" checked data-col="Région" data-type="texte" onchange="cbUpdatePreview()">
+                Région <span class="cb-col-badge cb-type-texte">texte</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="cb-group">
+            <div class="cb-group-hdr" onclick="cbToggleGroup('article')">
+              <i class="fas fa-box" style="color:#22c55e"></i>
+              <span style="color:#22c55e">Article</span>
+              <span class="gh-toggle">cliquer pour tout cocher/décocher</span>
+            </div>
+            <div class="cb-group-cols" id="cbg-article">
+              <label class="cb-col-toggle">
+                <input type="checkbox" checked data-col="Nom Article" data-type="texte" onchange="cbUpdatePreview()">
+                Nom Article <span class="cb-col-badge cb-type-texte">texte</span>
+              </label>
+              <label class="cb-col-toggle">
+                <input type="checkbox" checked data-col="Catégorie" data-type="texte" onchange="cbUpdatePreview()">
+                Catégorie <span class="cb-col-badge cb-type-texte">texte</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="cb-group">
+            <div class="cb-group-hdr" onclick="cbToggleGroup('commercial')">
+              <i class="fas fa-briefcase" style="color:#8b5cf6"></i>
+              <span style="color:#8b5cf6">Commercial</span>
+              <span class="gh-toggle">cliquer pour tout cocher/décocher</span>
+            </div>
+            <div class="cb-group-cols" id="cbg-commercial">
+              <label class="cb-col-toggle">
+                <input type="checkbox" checked data-col="Code Commercial" data-type="texte" onchange="cbUpdatePreview()">
+                Code Commercial <span class="cb-col-badge cb-type-texte">texte</span>
+              </label>
+              <label class="cb-col-toggle">
+                <input type="checkbox" checked data-col="Nom Commercial" data-type="texte" onchange="cbUpdatePreview()">
+                Nom Commercial <span class="cb-col-badge cb-type-texte">texte</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="cb-group">
+            <div class="cb-group-hdr" onclick="cbToggleGroup('financier')">
+              <i class="fas fa-coins" style="color:#eab308"></i>
+              <span style="color:#eab308">Financier</span>
+              <span class="gh-toggle">cliquer pour tout cocher/décocher</span>
+            </div>
+            <div class="cb-group-cols" id="cbg-financier">
+              <label class="cb-col-toggle">
+                <input type="checkbox" checked data-col="Remise (%)" data-type="pourcentage" onchange="cbUpdatePreview()">
+                Remise (%) <span class="cb-col-badge cb-type-pct">%</span>
+              </label>
+              <label class="cb-col-toggle">
+                <input type="checkbox" data-col="Marge Ligne" data-type="montant" onchange="cbUpdatePreview()">
+                Marge Ligne <span class="cb-col-badge cb-type-montant">montant</span>
+              </label>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Colonnes personnalisées -->
+        <div class="cb-step-label"><i class="fas fa-plus-circle" style="color:var(--cyan)"></i> Colonnes personnalisées</div>
+        <div id="cb-perso-list"></div>
+        <button class="btn btn-ghost" style="font-size:12px;padding:6px 13px;margin-bottom:16px"
+                onclick="cbAddPerso()">
+          <i class="fas fa-plus"></i> Ajouter une colonne personnalisée
+        </button>
+
+        <!-- Aperçu -->
+        <div class="cb-step-label"><i class="fas fa-eye" style="color:var(--text3)"></i> Aperçu du canevas</div>
+        <div class="cb-preview">
+          <table id="cb-preview-table"></table>
+        </div>
+
+        <!-- Nom + télécharger -->
+        <div class="cb-generate-row">
+          <input type="text" id="cb-filename" value="mon_canevas" placeholder="Nom du fichier">
+          <button class="btn btn-success" id="cb-gen-btn" onclick="cbGenerate()">
+            <i class="fas fa-download"></i> Télécharger le canevas Excel
+          </button>
+        </div>
+        <p style="font-size:11px;color:var(--text3);margin-top:8px">
+          <i class="fas fa-arrow-right" style="color:var(--orange)"></i>
+          Remplissez le fichier Excel, puis revenez sur l'onglet <strong style="color:var(--text2)">2 · Importer les données</strong>
+        </p>
+      </div>
+
+      <!-- ══ Panel 2 : Import ══ -->
+      <div class="im-panel" id="impanel-import">
+        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
+          Déposez votre fichier de données (canevas rempli ou tout autre fichier Excel/CSV).
+          Les colonnes sont détectées automatiquement.
+        </p>
+
+        <div class="drop-zone" id="import-drop-zone"
+             onclick="document.getElementById('import-file-input').click()"
+             ondragover="importDragOver(event)"
+             ondragleave="importDragLeave()"
+             ondrop="importDrop(event)">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <h4 id="import-drop-label">Déposez votre fichier ici</h4>
+          <p>ou cliquez pour parcourir</p>
+          <div class="dz-badges">
+            <span class="dz-badge g"><i class="fas fa-file-excel"></i> .xlsx</span>
+            <span class="dz-badge g"><i class="fas fa-file-excel"></i> .xls</span>
+            <span class="dz-badge b"><i class="fas fa-file-csv"></i> .csv</span>
+          </div>
+          <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv"
+                 style="display:none" onchange="importFileSelected(event)">
+        </div>
+
+        <div id="import-progress" style="display:none;margin-top:14px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)">
+            <span id="import-progress-label">Envoi…</span>
+            <span id="import-progress-pct">0%</span>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="import-progress-bar"></div>
+          </div>
+        </div>
+
+        <div class="import-result-card" id="import-result">
+          <div class="result-stats" id="import-result-stats"></div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:6px"><strong>Colonnes reconnues :</strong></div>
+          <div class="detected-cols" id="import-detected-cols"></div>
+          <div class="error-list" id="import-error-list"></div>
+        </div>
+
+        <p style="font-size:11px;color:var(--text3);margin-top:14px">
+          <i class="fas fa-info-circle"></i>
+          Colonnes minimales requises : <strong style="color:var(--text2)">Date</strong> ·
+          <strong style="color:var(--text2)">Code Client</strong> ·
+          <strong style="color:var(--text2)">Code Article</strong>
+        </p>
+      </div>
+
+    </div><!-- /im-body -->
+
+    <!-- Footer -->
+    <div style="padding:12px 24px;border-top:1px solid var(--border);
+                display:flex;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeImportModal()">Fermer</button>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════ CHATBOT ═══════════ -->
@@ -1620,168 +1878,257 @@ async function exportData(format) {
 }
 
 /* ────────────────────────────────
-   IMPORT MODAL
+   MODAL CANEVAS + IMPORT
 ──────────────────────────────── */
-function openImportModal() {
+
+/* ── Ouverture / fermeture ── */
+function openImportModal(tab) {
     document.getElementById('import-overlay').classList.add('open');
-    resetImportModal();
+    switchImTab(tab || 'canevas');
+    cbUpdatePreview();
 }
 function closeImportModal(e) {
     if (e && e.target !== document.getElementById('import-overlay')) return;
     document.getElementById('import-overlay').classList.remove('open');
 }
-
-function resetImportModal() {
-    document.getElementById('import-drop-label').textContent = 'Déposez votre fichier ici';
-    document.getElementById('import-progress').style.display  = 'none';
-    document.getElementById('import-result').style.display    = 'none';
-    document.getElementById('import-file-input').value        = '';
-    document.getElementById('import-drop-zone').classList.remove('drag-over');
+function switchImTab(id) {
+    ['canevas','import'].forEach(t => {
+        document.getElementById(`imtab-${t}`)?.classList.toggle('active', t === id);
+        document.getElementById(`impanel-${t}`)?.classList.toggle('active', t === id);
+    });
 }
 
-function importDragOver(e) {
-    e.preventDefault();
-    document.getElementById('import-drop-zone').classList.add('drag-over');
-}
-function importDragLeave() {
-    document.getElementById('import-drop-zone').classList.remove('drag-over');
-}
-function importDrop(e) {
-    e.preventDefault();
-    importDragLeave();
-    const file = e.dataTransfer.files[0];
-    if (file) doImport(file);
-}
-function importFileSelected(e) {
-    const file = e.target.files[0];
-    if (file) doImport(file);
+/* ════════════════════════════════
+   CANEVAS BUILDER (intégré modal)
+════════════════════════════════ */
+const CB_OBLIG = [
+    { nom:'Date',          type:'date',    obligatoire:true, description:'Date de la transaction (YYYY-MM-DD)' },
+    { nom:'Code Client',   type:'texte',   obligatoire:true, description:'Code unique du client' },
+    { nom:'Code Article',  type:'texte',   obligatoire:true, description:"Code unique de l'article" },
+    { nom:'Quantité',      type:'nombre',  obligatoire:true, description:'Quantité vendue' },
+    { nom:'Prix Unitaire', type:'montant', obligatoire:true, description:'Prix unitaire (MAD)' },
+];
+const CB_OPT_META = {
+    'Nom Client':      { type:'texte',       description:'Nom complet du client' },
+    'Région':          { type:'texte',       description:'Région géographique' },
+    'Nom Article':     { type:'texte',       description:"Désignation de l'article" },
+    'Catégorie':       { type:'texte',       description:'Catégorie produit' },
+    'Code Commercial': { type:'texte',       description:'Code du commercial' },
+    'Nom Commercial':  { type:'texte',       description:'Nom du commercial' },
+    'Remise (%)':      { type:'pourcentage', description:'Taux de remise (%)' },
+    'Marge Ligne':     { type:'montant',     description:'Marge brute par ligne (MAD)' },
+};
+const CB_EXEMPLES = {
+    'Date':'2024-01-15','Code Client':'CLT001','Nom Client':'Entreprise Alpha',
+    'Région':'Alger','Code Article':'ART001','Nom Article':'Produit A',
+    'Catégorie':'Électronique','Code Commercial':'COM001','Nom Commercial':'Ahmed Benali',
+    'Quantité':'5','Prix Unitaire':'10 000','Remise (%)':'10','Marge Ligne':'2 500',
+};
+
+let cbPersoCount = 0;
+
+function cbGetCols() {
+    const cols = [...CB_OBLIG];
+    // Optionnelles cochées (dans l'ordre DOM = ordre des groupes)
+    document.querySelectorAll('#impanel-canevas .cb-col-toggle input:checked').forEach(cb => {
+        const nom  = cb.dataset.col;
+        const type = cb.dataset.type || 'texte';
+        const meta = CB_OPT_META[nom] || { description:'' };
+        cols.push({ nom, type, obligatoire:false, description:meta.description });
+    });
+    // Perso
+    document.querySelectorAll('.cb-perso-row').forEach(row => {
+        const nom  = row.querySelector('.cbp-nom').value.trim();
+        const type = row.querySelector('.cbp-type').value;
+        if (nom) cols.push({ nom, type, obligatoire:false, description:'Champ personnalisé' });
+    });
+    return cols;
 }
 
-async function doImport(file) {
-    // Vérification extension
-    const ext = file.name.split('.').pop().toLowerCase();
-    if (!['xlsx', 'xls', 'csv'].includes(ext)) {
-        showImportResult('error', null, null, 'Format non supporté. Utilisez .xlsx, .xls ou .csv');
-        return;
-    }
+function cbUpdatePreview() {
+    const cols  = cbGetCols();
+    const table = document.getElementById('cb-preview-table');
+    if (!table) return;
 
-    // UI: nom du fichier + progression
-    document.getElementById('import-drop-label').textContent = `📄 ${file.name}`;
-    const progress = document.getElementById('import-progress');
-    progress.style.display = 'block';
-    document.getElementById('import-result').style.display = 'none';
+    const isOblig = c => CB_OBLIG.some(o => o.nom === c.nom);
+    const isPerso = c => !isOblig(c) && !CB_OPT_META[c.nom];
 
-    // Animation progression indéterminée
-    let pct = 0;
-    const progBar   = document.getElementById('import-progress-bar');
-    const progLabel = document.getElementById('import-progress-label');
-    const progPct   = document.getElementById('import-progress-pct');
+    const thRow = cols.map(c => {
+        const cls = isOblig(c) ? 'oblig' : isPerso(c) ? 'perso' : 'opt';
+        return `<th class="${cls}">${c.nom}${c.obligatoire ? ' *' : ''}</th>`;
+    }).join('');
+    const tdRow = cols.map(c => {
+        const v = CB_EXEMPLES[c.nom] || (c.type === 'date' ? '2024-01-15' : c.type === 'nombre' ? '1' : c.type === 'montant' ? '0' : '…');
+        return `<td>${v}</td>`;
+    }).join('');
 
-    progLabel.textContent = 'Lecture et analyse du fichier…';
-    const timer = setInterval(() => {
-        pct = Math.min(pct + Math.random() * 8, 85);
-        progBar.style.width = pct + '%';
-        progPct.textContent  = Math.round(pct) + '%';
-    }, 200);
+    table.innerHTML = `<thead><tr>${thRow}</tr></thead><tbody><tr>${tdRow}</tr></tbody>`;
+}
+
+function cbToggleGroup(groupId) {
+    const cbs = document.querySelectorAll(`#cbg-${groupId} input[type=checkbox]`);
+    const allOn = [...cbs].every(c => c.checked);
+    cbs.forEach(c => { c.checked = !allOn; });
+    cbUpdatePreview();
+}
+
+function cbAddPerso() {
+    cbPersoCount++;
+    const id = `cbp-${cbPersoCount}`;
+    const row = document.createElement('div');
+    row.className = 'cb-perso-row'; row.id = id;
+    row.innerHTML = `
+        <input type="text" class="cbp-nom" placeholder="Nom de la colonne"
+               oninput="cbUpdatePreview()">
+        <select class="cbp-type" onchange="cbUpdatePreview()">
+            <option value="texte">Texte</option>
+            <option value="nombre">Nombre</option>
+            <option value="montant">Montant</option>
+            <option value="date">Date</option>
+            <option value="pourcentage">%</option>
+        </select>
+        <button class="cb-del-btn" onclick="cbDelPerso('${id}')">
+            <i class="fas fa-times"></i>
+        </button>`;
+    document.getElementById('cb-perso-list').appendChild(row);
+    cbUpdatePreview();
+}
+
+function cbDelPerso(id) {
+    document.getElementById(id)?.remove();
+    cbUpdatePreview();
+}
+
+async function cbGenerate() {
+    const cols = cbGetCols();
+    const nom  = (document.getElementById('cb-filename').value.trim() || 'mon_canevas');
+    const btn  = document.getElementById('cb-gen-btn');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Génération…';
 
     try {
-        const formData = new FormData();
-        formData.append('file', file);
+        const res = await fetch('/api/canevas/generer/', {
+            method: 'POST',
+            headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+            body: JSON.stringify({ colonnes: cols, nom_fichier: nom }),
+        });
+        if (!res.ok) {
+            const e = await res.json().catch(() => ({}));
+            alert(e.detail || 'Erreur lors de la génération');
+            return;
+        }
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${nom}.xlsx`;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
 
+        // Propose de passer à l'onglet import
+        btn.innerHTML = '<i class="fas fa-check"></i> Téléchargé !';
+        btn.style.background = 'var(--green)';
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-download"></i> Télécharger le canevas Excel';
+            btn.style.background = '';
+            switchImTab('import');
+        }, 2000);
+    } catch(e) {
+        alert('Erreur : ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-download"></i> Télécharger le canevas Excel';
+    }
+}
+
+/* ════════════════════════════════
+   IMPORT (drop zone)
+════════════════════════════════ */
+function importDragOver(e) { e.preventDefault(); document.getElementById('import-drop-zone').classList.add('drag-over'); }
+function importDragLeave() { document.getElementById('import-drop-zone').classList.remove('drag-over'); }
+function importDrop(e) { e.preventDefault(); importDragLeave(); const f = e.dataTransfer.files[0]; if (f) doImport(f); }
+function importFileSelected(e) { const f = e.target.files[0]; if (f) doImport(f); }
+
+async function doImport(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['xlsx','xls','csv'].includes(ext)) {
+        showImportResult('error', null, null, 'Format non supporté (.xlsx, .xls, .csv uniquement)');
+        return;
+    }
+    document.getElementById('import-drop-label').textContent = `📄 ${file.name}`;
+    document.getElementById('import-progress').style.display = 'block';
+    document.getElementById('import-result').style.display   = 'none';
+
+    let pct = 0;
+    const bar   = document.getElementById('import-progress-bar');
+    const lbl   = document.getElementById('import-progress-label');
+    const pctEl = document.getElementById('import-progress-pct');
+    lbl.textContent = 'Lecture et analyse…';
+    const timer = setInterval(() => {
+        pct = Math.min(pct + Math.random() * 9, 85);
+        bar.style.width  = pct + '%';
+        pctEl.textContent = Math.round(pct) + '%';
+    }, 180);
+
+    try {
+        const fd = new FormData(); fd.append('file', file);
         const res = await fetch('/api/import/', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
-            body: formData,
+            body: fd,
         });
-
         clearInterval(timer);
-        progBar.style.width = '100%';
-        progPct.textContent  = '100%';
-        progLabel.textContent = 'Traitement terminé';
+        bar.style.width = '100%'; pctEl.textContent = '100%';
+        lbl.textContent = 'Terminé';
 
         const data = await res.json();
+        if (!res.ok) { showImportResult('error', null, null, data.error || `Erreur ${res.status}`); return; }
 
-        if (!res.ok) {
-            showImportResult('error', null, null, data.error || `Erreur ${res.status}`);
-            return;
-        }
-
-        showImportResult('success', data, file.name);
-
-        // Rafraîchit le dashboard après un import réussi
+        showImportResult('success', data);
         if (data.imported > 0) {
-            setTimeout(() => {
-                loadDashboard();
-                const activeTab = document.querySelector('.tab-content.active')?.id?.replace('tab-', '');
-                if (activeTab && activeTab !== 'dashboard') onFilterChange();
-            }, 1500);
+            setTimeout(() => { loadDashboard(); }, 1500);
         }
-
-    } catch (err) {
+    } catch(err) {
         clearInterval(timer);
         showImportResult('error', null, null, 'Erreur réseau : ' + err.message);
     }
 }
 
-function showImportResult(type, data, filename, errorMsg) {
+function showImportResult(type, data, _f, errMsg) {
     const card  = document.getElementById('import-result');
     const stats = document.getElementById('import-result-stats');
     const cols  = document.getElementById('import-detected-cols');
     const errs  = document.getElementById('import-error-list');
-
-    card.className  = `import-result-card ${type}`;
+    card.className = `import-result-card ${type}`;
     card.style.display = 'block';
 
     if (type === 'error') {
-        stats.innerHTML = `<div style="color:var(--red);font-size:14px;font-weight:600">
-            <i class="fas fa-times-circle"></i> ${errorMsg}
-        </div>`;
-        cols.innerHTML = '';
-        errs.innerHTML = '';
-        return;
+        stats.innerHTML = `<div style="color:var(--red);font-size:13px;font-weight:600">
+            <i class="fas fa-times-circle"></i> ${errMsg}</div>`;
+        cols.innerHTML = ''; errs.innerHTML = ''; return;
     }
 
-    // Succès
-    const okColor   = data.imported > 0 ? 'var(--green)' : 'var(--text2)';
-    const skipColor = data.skipped  > 0 ? 'var(--yellow)' : 'var(--text2)';
-    const errColor  = data.errors   > 0 ? 'var(--red)'    : 'var(--text2)';
+    const vc = v => v > 0 ? 'var(--green)'  : 'var(--text2)';
+    const vs = v => v > 0 ? 'var(--yellow)' : 'var(--text2)';
+    const ve = v => v > 0 ? 'var(--red)'    : 'var(--text2)';
 
     stats.innerHTML = `
-        <div class="result-stat">
-            <div class="val" style="color:${okColor}">${data.imported}</div>
-            <div class="lbl">Importées</div>
-        </div>
-        <div class="result-stat">
-            <div class="val" style="color:${skipColor}">${data.skipped}</div>
-            <div class="lbl">Ignorées</div>
-        </div>
-        <div class="result-stat">
-            <div class="val" style="color:${errColor}">${data.errors}</div>
-            <div class="lbl">Erreurs</div>
-        </div>
-        <div class="result-stat">
-            <div class="val" style="color:var(--text2)">${data.total_rows}</div>
-            <div class="lbl">Total lignes</div>
-        </div>`;
+        <div class="result-stat"><div class="val" style="color:${vc(data.imported)}">${data.imported}</div><div class="lbl">Importées</div></div>
+        <div class="result-stat"><div class="val" style="color:${vs(data.skipped)}">${data.skipped}</div><div class="lbl">Ignorées</div></div>
+        <div class="result-stat"><div class="val" style="color:${ve(data.errors)}">${data.errors}</div><div class="lbl">Erreurs</div></div>
+        <div class="result-stat"><div class="val" style="color:var(--text2)">${data.total_rows}</div><div class="lbl">Total</div></div>`;
 
-    // Colonnes détectées
-    const allCols = [
-        ...(data.colonnes_detectees || []).map(c => `<span class="col-chip mapped"><i class="fas fa-check" style="font-size:9px"></i> ${c}</span>`),
-        ...(data.colonnes_non_mappees || []).map(c => `<span class="col-chip" title="Colonne conservée dans champs personnalisés">${c}</span>`),
-    ];
-    cols.innerHTML = allCols.join('') || '<span style="color:var(--text2);font-size:12px">—</span>';
+    cols.innerHTML = [
+        ...(data.colonnes_detectees||[]).map(c=>`<span class="col-chip mapped">✓ ${c}</span>`),
+        ...(data.colonnes_non_mappees||[]).map(c=>`<span class="col-chip" title="Conservé en champ personnalisé">${c}</span>`),
+    ].join('') || '—';
 
-    // Erreurs
-    errs.innerHTML = (data.messages_erreurs || []).length
-        ? data.messages_erreurs.map(e => `<div>⚠ ${e}</div>`).join('')
-        : '';
-
-    // Message résumé
+    errs.innerHTML = (data.messages_erreurs||[]).map(e=>`<div>⚠ ${e}</div>`).join('');
     if (data.imported > 0) {
-        errs.innerHTML = `<div style="color:var(--green);font-size:13px;margin-top:8px;font-weight:600">
+        errs.innerHTML = `<div style="color:var(--green);font-weight:600;margin-bottom:4px">
             <i class="fas fa-check-circle"></i>
-            ${data.imported} ligne${data.imported > 1 ? 's' : ''} ajoutée${data.imported > 1 ? 's' : ''} — dashboard mis à jour
-        </div>` + errs.innerHTML;
+            ${data.imported} ligne${data.imported>1?'s':''} importée${data.imported>1?'s':''} — dashboard actualisé</div>` + errs.innerHTML;
     }
 }
 
