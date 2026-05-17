@@ -31,6 +31,7 @@ urlpatterns = [
     # API Previsions
     path('api/previsions/', views.api_previsions, name='api_previsions'),
     path('api/alertes/', views.api_alertes, name='api_alertes'),
+    path('api/recommandations/', views.api_recommandations, name='api_recommandations'),
     
     # API Exports
     path('api/export/excel/', views.api_export_excel, name='api_export_excel'),

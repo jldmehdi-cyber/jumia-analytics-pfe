@@ -383,6 +383,86 @@
         .empty-state p { font-size: 15px; color: var(--text2); }
 
         /* ══════════════════════════════
+           RECOMMANDATIONS
+        ══════════════════════════════ */
+        .health-ring-wrap {
+            display: flex; align-items: center; justify-content: center; gap: 40px;
+            padding: 28px 0 20px; flex-wrap: wrap;
+        }
+        .health-ring-svg { position: relative; width: 160px; height: 160px; flex-shrink: 0; }
+        .health-ring-svg svg { transform: rotate(-90deg); }
+        .health-ring-center {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .health-score-val { font-size: 38px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
+        .health-score-lbl { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; margin-top: 3px; }
+        .health-meta { flex: 1; min-width: 200px; }
+        .health-niveau {
+            font-size: 22px; font-weight: 700; margin-bottom: 8px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .health-resume { font-size: 13.5px; color: var(--text2); line-height: 1.7; }
+        .health-stats { display: flex; gap: 16px; margin-top: 16px; flex-wrap: wrap; }
+        .health-stat-chip {
+            background: var(--bg3); border: 1px solid var(--border);
+            border-radius: 8px; padding: 8px 14px; text-align: center;
+        }
+        .health-stat-chip .val { font-size: 18px; font-weight: 700; }
+        .health-stat-chip .lbl { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; margin-top: 1px; }
+
+        .reco-group-hdr {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 13px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .6px;
+            padding: 10px 0 8px; margin-top: 8px;
+        }
+        .reco-card {
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 14px; padding: 20px 22px;
+            margin-bottom: 12px;
+            display: flex; gap: 18px; align-items: flex-start;
+            transition: transform .15s, box-shadow .15s;
+        }
+        .reco-card:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,.28); }
+        .reco-card.prio-haute   { border-left: 4px solid var(--red); }
+        .reco-card.prio-moyenne { border-left: 4px solid var(--yellow); }
+        .reco-card.prio-faible  { border-left: 4px solid var(--blue); }
+        .reco-icon {
+            width: 46px; height: 46px; border-radius: 13px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; flex-shrink: 0;
+        }
+        .reco-body { flex: 1; min-width: 0; }
+        .reco-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+        .reco-titre { font-size: 15px; font-weight: 700; flex: 1; }
+        .reco-badges { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+        .reco-badge-cat {
+            font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+            background: var(--bg4); color: var(--text2); text-transform: uppercase; letter-spacing: .4px;
+        }
+        .reco-badge-impact {
+            font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+            background: rgba(34,197,94,.1); color: var(--green);
+        }
+        .reco-desc { font-size: 13px; color: var(--text2); line-height: 1.65; margin-bottom: 12px; }
+        .reco-actions { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+        .reco-actions li {
+            display: flex; align-items: flex-start; gap: 8px;
+            font-size: 12.5px; color: var(--text1);
+        }
+        .reco-actions li::before {
+            content: '→'; color: var(--orange); font-weight: 700; flex-shrink: 0; margin-top: 1px;
+        }
+        .reco-donnees {
+            margin-top: 12px; padding: 10px 14px;
+            background: var(--bg3); border-radius: 8px;
+            display: flex; gap: 20px; flex-wrap: wrap;
+        }
+        .reco-donnee-item { font-size: 12px; color: var(--text2); }
+        .reco-donnee-item strong { color: var(--text1); }
+
+        /* ══════════════════════════════
            EXPORT BAR
         ══════════════════════════════ */
         .export-bar {
@@ -525,11 +605,15 @@
     </div>
 
     <div class="sidebar-section">
-        <div class="sidebar-label">Alertes</div>
+        <div class="sidebar-label">Alertes & Décisions</div>
         <div class="nav-item" data-tab="alertes">
             <div class="nav-icon"><i class="fas fa-bell"></i></div>
             Alertes
             <span class="nav-badge" id="badge-alertes" style="display:none">0</span>
+        </div>
+        <div class="nav-item" data-tab="recommandations">
+            <div class="nav-icon" style="color:var(--yellow)"><i class="fas fa-lightbulb"></i></div>
+            Recommandations
         </div>
     </div>
 
@@ -809,6 +893,30 @@
             </div>
         </div>
 
+        <!-- ═══ TAB: RECOMMANDATIONS ═══ -->
+        <div id="tab-recommandations" class="tab-content">
+
+            <!-- Score Santé -->
+            <div class="card" style="margin-bottom:20px">
+                <div class="card-header">
+                    <div class="card-title"><i class="fas fa-heartbeat"></i> Score de Santé Globale</div>
+                    <button class="btn btn-ghost" onclick="loadRecommandations()"><i class="fas fa-sync-alt"></i> Rafraîchir</button>
+                </div>
+                <div class="health-ring-wrap" id="health-ring-wrap">
+                    <div class="empty-state" style="padding:20px">
+                        <div class="spinner"></div>
+                        <p>Analyse des données…</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cards recommandations -->
+            <div id="reco-container">
+                <!-- rempli dynamiquement -->
+            </div>
+
+        </div>
+
     </div><!-- /content -->
 </main>
 
@@ -865,11 +973,12 @@ async function api(url, opts = {}) {
    NAVIGATION
 ──────────────────────────────── */
 const PAGE_TITLES = {
-    dashboard:      'Vue d\'ensemble',
-    comportemental: 'Analyse Comportementale',
-    rfm:            'Segmentation RFM',
-    previsions:     'Prévisions ML',
-    alertes:        'Alertes & Anomalies',
+    dashboard:        'Vue d\'ensemble',
+    comportemental:   'Analyse Comportementale',
+    rfm:              'Segmentation RFM',
+    previsions:       'Prévisions ML',
+    alertes:          'Alertes & Anomalies',
+    recommandations:  'Recommandations Décisionnelles',
 };
 
 document.querySelectorAll('.nav-item[data-tab]').forEach(el => {
@@ -884,10 +993,11 @@ function showTab(id) {
     document.getElementById(`tab-${id}`).classList.add('active');
     document.getElementById('page-title').textContent = PAGE_TITLES[id] || id;
 
-    if (id === 'comportemental') loadComportemental();
-    if (id === 'rfm')            loadRFM();
-    if (id === 'previsions')     loadPrevisions();
-    if (id === 'alertes')        loadAlertes();
+    if (id === 'comportemental')  loadComportemental();
+    if (id === 'rfm')             loadRFM();
+    if (id === 'previsions')      loadPrevisions();
+    if (id === 'alertes')         loadAlertes();
+    if (id === 'recommandations') loadRecommandations();
 }
 
 /* ────────────────────────────────
@@ -904,11 +1014,12 @@ function getFilters() {
 
 function onFilterChange() {
     const activeTab = document.querySelector('.tab-content.active')?.id?.replace('tab-', '') || 'dashboard';
-    if (activeTab === 'dashboard')      loadDashboard();
-    if (activeTab === 'comportemental') loadComportemental();
-    if (activeTab === 'rfm')            loadRFM();
-    if (activeTab === 'previsions')     loadPrevisions();
-    if (activeTab === 'alertes')        loadAlertes();
+    if (activeTab === 'dashboard')        loadDashboard();
+    if (activeTab === 'comportemental')  loadComportemental();
+    if (activeTab === 'rfm')             loadRFM();
+    if (activeTab === 'previsions')      loadPrevisions();
+    if (activeTab === 'alertes')         loadAlertes();
+    if (activeTab === 'recommandations') loadRecommandations();
 
     // Badge période
     const periodeMap = { mois:'Ce mois', trimestre:'Ce trimestre', annee:'Cette année', all:'Historique complet' };
@@ -1333,6 +1444,141 @@ async function exportData(format) {
         const labels = { excel: '<i class="fas fa-file-excel"></i> Excel', csv: '<i class="fas fa-file-csv"></i> CSV' };
         btns.forEach(b => { b.disabled = false; b.innerHTML = labels[format]; });
     }
+}
+
+/* ────────────────────────────────
+   RECOMMANDATIONS
+──────────────────────────────── */
+async function loadRecommandations() {
+    const f = getFilters();
+
+    // Reset UI
+    document.getElementById('health-ring-wrap').innerHTML = `
+        <div class="empty-state" style="padding:20px">
+            <div class="spinner"></div><p>Analyse des données…</p>
+        </div>`;
+    document.getElementById('reco-container').innerHTML = '';
+
+    const res = await api(`${API}/recommandations/?${f}`);
+    if (!res) return;
+
+    /* ── Score Santé ── */
+    const score   = res.score_sante ?? 0;
+    const couleur = res.couleur_score || '#8b5cf6';
+    const niveau  = res.niveau_sante || '—';
+    const resume  = res.resume || '';
+
+    // SVG ring (circumference = 2π×58 ≈ 364.4)
+    const C = 364.4;
+    const dash = (score / 100 * C).toFixed(1);
+
+    const statsCtx = res.stats_contexte || {};
+    const statsHtml = Object.entries(statsCtx).map(([k, v]) => {
+        const labels = {
+            nb_clients: 'Clients', nb_articles: 'Articles',
+            ca_total: 'CA total', ca_moyen_mensuel: 'CA/mois moy.',
+            nb_transactions: 'Transactions', taux_marge: 'Taux marge',
+        };
+        const lbl = labels[k] || k.replace(/_/g, ' ');
+        const val = typeof v === 'number'
+            ? (v > 10000 ? fmt(v) : v > 1 && k.includes('taux') ? fmtPct(v) : v.toLocaleString('fr'))
+            : v;
+        return `<div class="health-stat-chip">
+                    <div class="val" style="color:${couleur}">${val}</div>
+                    <div class="lbl">${lbl}</div>
+                </div>`;
+    }).join('');
+
+    document.getElementById('health-ring-wrap').innerHTML = `
+        <div class="health-ring-svg">
+            <svg width="160" height="160" viewBox="0 0 160 160">
+                <circle cx="80" cy="80" r="58" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="14"/>
+                <circle cx="80" cy="80" r="58" fill="none"
+                    stroke="${couleur}" stroke-width="14"
+                    stroke-dasharray="${dash} ${C}"
+                    stroke-linecap="round"
+                    style="transition:stroke-dasharray .8s ease"/>
+            </svg>
+            <div class="health-ring-center">
+                <div class="health-score-val" style="color:${couleur}">${score}</div>
+                <div class="health-score-lbl">/ 100</div>
+            </div>
+        </div>
+        <div class="health-meta">
+            <div class="health-niveau" style="color:${couleur}">
+                <i class="fas fa-heartbeat"></i> ${niveau}
+            </div>
+            <div class="health-resume">${resume}</div>
+            <div class="health-stats">${statsHtml}</div>
+        </div>`;
+
+    /* ── Recommandations groupées par priorité ── */
+    const recos = res.recommandations || [];
+    if (!recos.length) {
+        document.getElementById('reco-container').innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-check-circle" style="color:var(--green)"></i>
+                <p>Aucune recommandation — vos indicateurs sont au vert !</p>
+            </div>`;
+        return;
+    }
+
+    const groups = [
+        { key: 'haute',   label: 'Haute priorité',   icon: 'fas fa-exclamation-circle', color: 'var(--red)' },
+        { key: 'moyenne', label: 'Priorité moyenne',  icon: 'fas fa-exclamation-triangle', color: 'var(--yellow)' },
+        { key: 'faible',  label: 'Faible priorité',   icon: 'fas fa-info-circle', color: 'var(--blue)' },
+    ];
+
+    let html = '';
+    groups.forEach(g => {
+        const items = recos.filter(r => r.priorite === g.key);
+        if (!items.length) return;
+
+        html += `<div class="reco-group-hdr" style="color:${g.color}">
+                    <i class="${g.icon}"></i> ${g.label}
+                    <span style="font-size:11px;background:${g.color}18;color:${g.color};
+                                 padding:2px 8px;border-radius:20px;font-weight:600;">
+                        ${items.length}
+                    </span>
+                 </div>`;
+
+        items.forEach(r => {
+            const iconBg    = `${r.couleur || '#f97316'}20`;
+            const actionsHtml = (r.actions || []).map(a => `<li>${a}</li>`).join('');
+            const donneesHtml = Object.keys(r.donnees || {}).length
+                ? `<div class="reco-donnees">${
+                    Object.entries(r.donnees).map(([k, v]) => {
+                        const lbl = k.replace(/_/g, ' ');
+                        const val = typeof v === 'number'
+                            ? (v > 10000 ? fmt(v) : v > 1 ? v.toLocaleString('fr') : fmtPct(v * 100))
+                            : v;
+                        return `<div class="reco-donnee-item"><strong>${val}</strong> ${lbl}</div>`;
+                    }).join('')
+                  }</div>`
+                : '';
+
+            html += `
+            <div class="reco-card prio-${r.priorite}">
+                <div class="reco-icon" style="background:${iconBg};color:${r.couleur}">
+                    <i class="${r.icone || 'fas fa-lightbulb'}"></i>
+                </div>
+                <div class="reco-body">
+                    <div class="reco-head">
+                        <div class="reco-titre">${r.titre}</div>
+                        <div class="reco-badges">
+                            <span class="reco-badge-cat">${r.categorie || ''}</span>
+                            ${r.impact_estime ? `<span class="reco-badge-impact"><i class="fas fa-bolt"></i> ${r.impact_estime}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="reco-desc">${r.description}</div>
+                    ${actionsHtml ? `<ul class="reco-actions">${actionsHtml}</ul>` : ''}
+                    ${donneesHtml}
+                </div>
+            </div>`;
+        });
+    });
+
+    document.getElementById('reco-container').innerHTML = html;
 }
 
 /* ────────────────────────────────

@@ -927,6 +927,308 @@ def api_previsions(request):
 
 
 # ============================================================
+# API RECOMMANDATIONS DÉCISIONNELLES
+# ============================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def api_recommandations(request):
+    """
+    Moteur de recommandations décisionnelles.
+    Analyse l'ensemble des données et génère des préconisations
+    actionnables classées par priorité et catégorie.
+    """
+    region    = request.GET.get('region', 'all')
+    config_id = request.GET.get('config_id')
+    qs = _base_qs(region=region, config_id=config_id)
+
+    if not qs.exists():
+        return Response({'recommandations': [], 'score_sante': 0, 'resume': 'Aucune donnée disponible.'})
+
+    recos = []
+    ref_date = _get_ref_date()
+
+    # ── Agrégats globaux ──────────────────────────────────────
+    from django.db.models import StdDev
+    agg = qs.aggregate(
+        ca=Sum('ca_ligne'), marge=Sum('marge_ligne'),
+        nb=Count('id_donnee'), nb_clients=Count('code_client', distinct=True),
+    )
+    ca_total   = float(agg['ca']    or 0)
+    marge_total= float(agg['marge'] or 0)
+    nb_tx      = agg['nb'] or 1
+    nb_clients = agg['nb_clients'] or 1
+    marge_pct  = (marge_total / ca_total * 100) if ca_total else 0
+    panier_moy = ca_total / nb_tx
+
+    # ── Tendance mensuelle (6 derniers mois) ──────────────────
+    monthly = list(qs
+        .annotate(mois=TruncMonth('date_transaction'))
+        .values('mois').annotate(ca=Sum('ca_ligne')).order_by('mois')
+    )
+    ca_vals = [float(m['ca'] or 0) for m in monthly]
+    tendance_pct = 0
+    if len(ca_vals) >= 2:
+        last6 = ca_vals[-6:]
+        if len(last6) >= 2 and last6[0]:
+            tendance_pct = round((last6[-1] - last6[0]) / last6[0] * 100, 1)
+
+    # ── Clients RFM ───────────────────────────────────────────
+    clients_data = list(qs.values('code_client', 'nom_client')
+        .annotate(
+            nb_achats=Count('id_donnee'),
+            ca_total=Sum('ca_ligne'),
+            derniere_date=Max('date_transaction'),
+        )
+    )
+    recences = []
+    for c in clients_data:
+        try:
+            recences.append((ref_date - c['derniere_date']).days)
+        except Exception:
+            recences.append(999)
+    rec_sorted = sorted(recences)
+    rec_med = rec_sorted[len(rec_sorted)//2] if rec_sorted else 90
+
+    clients_risque   = [c for c, r in zip(clients_data, recences) if r > rec_med * 1.5]
+    clients_inactifs = [c for c, r in zip(clients_data, recences) if r > rec_med * 2.5]
+    ca_risque = sum(float(c['ca_total'] or 0) for c in clients_risque)
+
+    # ── Articles ──────────────────────────────────────────────
+    articles = list(qs.values('code_article', 'nom_article', 'categorie')
+        .annotate(ca=Sum('ca_ligne'), nb=Count('id_donnee'), prix_moy=Avg('prix_unitaire'))
+        .order_by('-ca')
+    )
+    if articles:
+        ca_top3   = sum(float(a['ca'] or 0) for a in articles[:3])
+        conc_top3 = (ca_top3 / ca_total * 100) if ca_total else 0
+        nb_all    = [a['nb'] for a in articles]
+        nb_med    = sorted(nb_all)[len(nb_all)//2] if nb_all else 5
+        articles_caches = [a for a in articles if a['nb'] <= nb_med and float(a['prix_moy'] or 0) > panier_moy]
+    else:
+        conc_top3 = 0
+        articles_caches = []
+
+    # ── Régions ───────────────────────────────────────────────
+    regions_data = list(qs.values('region')
+        .annotate(ca=Sum('ca_ligne'), nb=Count('id_donnee'))
+        .order_by('-ca')
+    )
+    regions_faibles = []
+    if regions_data:
+        ca_moy_region = ca_total / len(regions_data)
+        regions_faibles = [r for r in regions_data if float(r['ca'] or 0) < ca_moy_region * 0.6]
+
+    # ═══════════════════════════════════════════════════
+    # GÉNÉRATION DES RECOMMANDATIONS
+    # ═══════════════════════════════════════════════════
+
+    # 1. CLIENTS À RISQUE DE PERTE
+    if clients_risque:
+        ca_pct = round(ca_risque / ca_total * 100, 1) if ca_total else 0
+        recos.append({
+            'id': 'reco_clients_risque',
+            'priorite': 'haute' if ca_pct > 20 else 'moyenne',
+            'categorie': 'client',
+            'icone': 'fa-user-clock',
+            'couleur': '#ef4444',
+            'titre': f'Réactiver {len(clients_risque)} client(s) à risque',
+            'description': f'{len(clients_risque)} client(s) n\'ont pas commandé depuis plus de {int(rec_med * 1.5)} jours, représentant {ca_pct}% du CA total ({int(ca_risque/1000)}K MAD).',
+            'actions': [
+                f'Contacter en priorité : {", ".join(c["nom_client"] or c["code_client"] for c in clients_risque[:3])}',
+                'Proposer une offre de réactivation (remise 10-15% sur prochaine commande)',
+                'Organiser une visite commerciale dans les 2 semaines',
+                'Analyser la raison de l\'inactivité (concurrent, prix, service ?)',
+            ],
+            'impact_estime': f'+{ca_pct:.0f}% CA potentiel récupérable',
+            'donnees': {'nb_clients': len(clients_risque), 'ca_risque': round(ca_risque, 0), 'recence_seuil': int(rec_med * 1.5)},
+        })
+
+    # 2. CONCENTRATION ARTICLES
+    if conc_top3 > 60:
+        recos.append({
+            'id': 'reco_diversification',
+            'priorite': 'haute' if conc_top3 > 75 else 'moyenne',
+            'categorie': 'commercial',
+            'icone': 'fa-exclamation-triangle',
+            'couleur': '#f97316',
+            'titre': f'Risque de concentration : {conc_top3:.0f}% du CA sur 3 articles',
+            'description': f'Votre activité dépend fortement de 3 articles qui génèrent {conc_top3:.0f}% du CA. Une rupture ou perte de contrat sur ces références fragilise l\'ensemble de l\'activité.',
+            'actions': [
+                f'Diversifier le portefeuille produit au-delà des top 3 articles',
+                'Identifier 2-3 nouveaux articles à fort potentiel à promouvoir',
+                'Négocier des contrats cadres pour sécuriser ces références clés',
+                'Fixer un objectif de réduction de concentration à 50% sous 6 mois',
+            ],
+            'impact_estime': 'Réduction du risque commercial, CA plus résilient',
+            'donnees': {'concentration_pct': round(conc_top3, 1), 'top3_ca': round(ca_top3, 0)},
+        })
+
+    # 3. ARTICLES SOUS-EXPLOITÉS
+    if articles_caches:
+        ca_pot = sum(float(a['ca'] or 0) * 1.5 for a in articles_caches[:3])
+        recos.append({
+            'id': 'reco_articles_caches',
+            'priorite': 'moyenne',
+            'categorie': 'marketing',
+            'icone': 'fa-gem',
+            'couleur': '#8b5cf6',
+            'titre': f'{len(articles_caches)} article(s) à fort potentiel sous-exploités',
+            'description': f'Ces articles ont un prix unitaire élevé mais un faible volume de commandes. Une meilleure visibilité commerciale pourrait générer {int(ca_pot/1000)}K MAD supplémentaires.',
+            'actions': [
+                f'Mettre en avant : {", ".join(a["nom_article"] or a["code_article"] for a in articles_caches[:3])}',
+                'Inclure ces références dans les propositions commerciales systématiquement',
+                'Former les commerciaux sur les arguments de vente de ces produits',
+                'Créer des offres bundles avec les articles les plus vendus',
+            ],
+            'impact_estime': f'+{int(ca_pot/1000)}K MAD potentiel (estimation)',
+            'donnees': {'nb_articles': len(articles_caches), 'ca_potentiel': round(ca_pot, 0)},
+        })
+
+    # 4. MARGE INSUFFISANTE
+    if marge_pct < 20:
+        recos.append({
+            'id': 'reco_marge',
+            'priorite': 'haute',
+            'categorie': 'finance',
+            'icone': 'fa-coins',
+            'couleur': '#eab308',
+            'titre': f'Marge brute faible : {marge_pct:.1f}% (cible > 25%)',
+            'description': f'La marge brute de {marge_pct:.1f}% est en dessous de la cible de 25%. Chaque point de marge gagné représente {int(ca_total * 0.01 / 1000)}K MAD supplémentaires.',
+            'actions': [
+                'Auditer les articles à marge négative ou très faible (<10%)',
+                'Renégocier les conditions d\'achat avec les fournisseurs principaux',
+                'Réduire les remises accordées systématiquement (politique de prix ferme)',
+                'Identifier les clients à qui des remises excessives sont accordées',
+            ],
+            'impact_estime': f'+{int(ca_total * 0.05 / 1000)}K MAD si +5pts de marge',
+            'donnees': {'marge_actuelle': round(marge_pct, 1), 'marge_cible': 25, 'ca_total': round(ca_total, 0)},
+        })
+
+    # 5. RÉGIONS SOUS-PERFORMANTES
+    if regions_faibles:
+        noms = [r['region'] for r in regions_faibles]
+        ca_manque = sum(ca_moy_region - float(r['ca'] or 0) for r in regions_faibles)
+        recos.append({
+            'id': 'reco_regions',
+            'priorite': 'moyenne',
+            'categorie': 'commercial',
+            'icone': 'fa-map-marked-alt',
+            'couleur': '#3b82f6',
+            'titre': f'Région(s) {", ".join(noms)} sous la moyenne de {int(ca_moy_region/1000)}K MAD',
+            'description': f'Les régions {", ".join(noms)} génèrent moins de 60% de la moyenne régionale. Un renforcement des ressources commerciales dans ces zones comblerait un manque de {int(ca_manque/1000)}K MAD.',
+            'actions': [
+                f'Affecter un commercial dédié aux régions : {", ".join(noms)}',
+                'Analyser les raisons de la sous-performance (pas de présence ? concurrence forte ?)',
+                'Fixer des objectifs trimestriels de rattrapage avec suivi mensuel',
+                'Envisager des actions promotionnelles ciblées sur ces zones',
+            ],
+            'impact_estime': f'+{int(ca_manque/1000)}K MAD de CA récupérable',
+            'donnees': {'regions': noms, 'ca_moyen_regional': round(ca_moy_region, 0), 'ca_manquant': round(ca_manque, 0)},
+        })
+
+    # 6. TENDANCE BAISSIÈRE
+    if tendance_pct < -10:
+        recos.append({
+            'id': 'reco_tendance',
+            'priorite': 'haute',
+            'categorie': 'commercial',
+            'icone': 'fa-chart-line',
+            'couleur': '#ef4444',
+            'titre': f'Tendance baissière détectée : {tendance_pct:+.1f}% sur la période',
+            'description': f'Le CA a baissé de {abs(tendance_pct):.1f}% entre le début et la fin de la période analysée. Une action corrective immédiate est recommandée pour stopper cette tendance.',
+            'actions': [
+                'Organiser une réunion commerciale d\'urgence pour identifier les causes',
+                'Revoir le pipeline commercial et accélérer les offres en cours',
+                'Lancer une campagne de relance clients sur les comptes dormants',
+                'Analyser si la baisse est saisonnière ou structurelle',
+            ],
+            'impact_estime': 'Stabilisation et retour à la tendance historique',
+            'donnees': {'variation_pct': tendance_pct},
+        })
+    elif tendance_pct > 15:
+        recos.append({
+            'id': 'reco_tendance_positive',
+            'priorite': 'faible',
+            'categorie': 'commercial',
+            'icone': 'fa-rocket',
+            'couleur': '#22c55e',
+            'titre': f'Croissance forte : {tendance_pct:+.1f}% — capitaliser sur l\'élan',
+            'description': f'La tendance est fortement positive ({tendance_pct:+.1f}%). C\'est le bon moment pour investir et consolider la croissance.',
+            'actions': [
+                'Renforcer les stocks et la capacité de livraison pour accompagner la croissance',
+                'Proposer des contrats annuels aux meilleurs clients pour sécuriser le CA',
+                'Recruter ou former des commerciaux supplémentaires',
+                'Explorer de nouveaux segments ou territoires pendant que la dynamique est favorable',
+            ],
+            'impact_estime': 'Maintien et accélération de la croissance',
+            'donnees': {'variation_pct': tendance_pct},
+        })
+
+    # 7. CLIENTS INACTIFS TOTAL
+    if clients_inactifs and len(clients_inactifs) != len(clients_risque):
+        recos.append({
+            'id': 'reco_inactifs',
+            'priorite': 'faible',
+            'categorie': 'client',
+            'icone': 'fa-user-slash',
+            'couleur': '#64748b',
+            'titre': f'{len(clients_inactifs)} client(s) inactif(s) à long terme',
+            'description': f'{len(clients_inactifs)} client(s) n\'ont pas commandé depuis plus de {int(rec_med * 2.5)} jours. Il faut décider de les réactiver ou de les sortir du portefeuille actif.',
+            'actions': [
+                'Envoyer une enquête de satisfaction pour comprendre le départ',
+                'Proposer une offre de retour exceptionnelle (conditions préférentielles)',
+                'Si pas de réponse sous 30j, reclasser en prospect froid',
+                'Analyser si ces clients sont allés chez un concurrent identifiable',
+            ],
+            'impact_estime': 'Nettoyage portefeuille ou récupération ponctuelle',
+            'donnees': {'nb_inactifs': len(clients_inactifs)},
+        })
+
+    # Trier : haute > moyenne > faible
+    ordre = {'haute': 0, 'moyenne': 1, 'faible': 2}
+    recos.sort(key=lambda r: ordre.get(r['priorite'], 3))
+
+    # Score santé global (0-100)
+    malus = 0
+    if tendance_pct < -10:   malus += 25
+    elif tendance_pct < 0:   malus += 10
+    if marge_pct < 20:       malus += 20
+    elif marge_pct < 25:     malus += 10
+    if conc_top3 > 75:       malus += 15
+    elif conc_top3 > 60:     malus += 8
+    if clients_risque:       malus += min(20, len(clients_risque) * 5)
+    if regions_faibles:      malus += len(regions_faibles) * 5
+    score = max(0, 100 - malus)
+
+    niveau = 'Excellent' if score >= 80 else 'Bon' if score >= 60 else 'Moyen' if score >= 40 else 'Critique'
+    couleur_score = '#22c55e' if score >= 80 else '#3b82f6' if score >= 60 else '#eab308' if score >= 40 else '#ef4444'
+
+    resume_parts = []
+    nb_haute = sum(1 for r in recos if r['priorite'] == 'haute')
+    nb_moy   = sum(1 for r in recos if r['priorite'] == 'moyenne')
+    if nb_haute: resume_parts.append(f'{nb_haute} action(s) prioritaire(s)')
+    if nb_moy:   resume_parts.append(f'{nb_moy} opportunité(s) à saisir')
+    resume = ' · '.join(resume_parts) if resume_parts else 'Situation globalement saine.'
+
+    return Response({
+        'recommandations': recos,
+        'score_sante': score,
+        'niveau_sante': niveau,
+        'couleur_score': couleur_score,
+        'resume': resume,
+        'nb_haute': nb_haute if nb_haute else 0,
+        'stats_contexte': {
+            'ca_total': round(ca_total, 0),
+            'marge_pct': round(marge_pct, 1),
+            'nb_clients': nb_clients,
+            'tendance_pct': tendance_pct,
+            'concentration_top3': round(conc_top3, 1),
+        },
+    })
+
+
+# ============================================================
 # API ALERTES
 # ============================================================
 
