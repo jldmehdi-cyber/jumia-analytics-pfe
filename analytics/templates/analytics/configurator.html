@@ -536,9 +536,10 @@
 
                     <!-- Groupe: Client -->
                     <div class="col-group" data-group="client">
-                        <div class="col-group-hdr" style="background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.35)">
+                        <div class="col-group-hdr" style="background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.35);cursor:pointer" onclick="toggleGroupe('client')" title="Tout cocher / décocher">
                             <i class="fas fa-user-circle" style="color:#3b82f6"></i>
                             <strong style="color:#3b82f6">Client</strong>
+                            <span style="margin-left:auto;font-size:10px;color:#3b82f6;opacity:.7">cliquer pour tout cocher/décocher</span>
                         </div>
                         <div class="col-group-body">
                             <label class="col-toggle locked">
@@ -562,9 +563,10 @@
 
                     <!-- Groupe: Article -->
                     <div class="col-group" data-group="article">
-                        <div class="col-group-hdr" style="background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.35)">
+                        <div class="col-group-hdr" style="background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.35);cursor:pointer" onclick="toggleGroupe('article')" title="Tout cocher / décocher">
                             <i class="fas fa-box" style="color:#22c55e"></i>
                             <strong style="color:#22c55e">Article</strong>
+                            <span style="margin-left:auto;font-size:10px;color:#22c55e;opacity:.7">cliquer pour tout cocher/décocher</span>
                         </div>
                         <div class="col-group-body">
                             <label class="col-toggle locked">
@@ -588,9 +590,10 @@
 
                     <!-- Groupe: Commercial -->
                     <div class="col-group" data-group="commercial">
-                        <div class="col-group-hdr" style="background:rgba(139,92,246,.1);border-color:rgba(139,92,246,.35)">
+                        <div class="col-group-hdr" style="background:rgba(139,92,246,.1);border-color:rgba(139,92,246,.35);cursor:pointer" onclick="toggleGroupe('commercial')" title="Tout cocher / décocher">
                             <i class="fas fa-briefcase" style="color:#8b5cf6"></i>
                             <strong style="color:#8b5cf6">Commercial</strong>
+                            <span style="margin-left:auto;font-size:10px;color:#8b5cf6;opacity:.7">cliquer pour tout cocher/décocher</span>
                         </div>
                         <div class="col-group-body">
                             <label class="col-toggle" data-col="Code Commercial" data-type="texte" data-desc="Code du commercial">
@@ -608,9 +611,10 @@
 
                     <!-- Groupe: Financier -->
                     <div class="col-group" data-group="financier">
-                        <div class="col-group-hdr" style="background:rgba(234,179,8,.1);border-color:rgba(234,179,8,.35)">
+                        <div class="col-group-hdr" style="background:rgba(234,179,8,.1);border-color:rgba(234,179,8,.35);cursor:pointer" onclick="toggleGroupe('financier')" title="Tout cocher / décocher">
                             <i class="fas fa-coins" style="color:#eab308"></i>
                             <strong style="color:#eab308">Financier</strong>
+                            <span style="margin-left:auto;font-size:10px;color:#eab308;opacity:.7">cliquer pour tout cocher/décocher</span>
                         </div>
                         <div class="col-group-body">
                             <label class="col-toggle locked">
@@ -1083,8 +1087,8 @@
             configurations = data;
 
             const options = data.map(c => `<option value="${c.id}">${c.nom}</option>`).join('');
-            document.getElementById('config-select-canevas').innerHTML = options || '<option value="">Aucune config</option>';
-            document.getElementById('config-select-import').innerHTML = options || '<option value="">Aucune config</option>';
+            const selImport = document.getElementById('config-select-import');
+            if (selImport) selImport.innerHTML = options || '<option value="">Aucune config</option>';
         }
 
         /* ════════════════════════════════════════
@@ -1114,22 +1118,55 @@
 
         let persoColCount = 0;
 
+        // Toggle tout un groupe (clic sur le header)
+        function toggleGroupe(group) {
+            const grp = document.querySelector(`.col-group[data-group="${group}"]`);
+            if (!grp) return;
+            const cbs = grp.querySelectorAll('.col-toggle:not(.locked) input[type=checkbox]');
+            if (!cbs.length) return;
+            const allChecked = [...cbs].every(cb => cb.checked);
+            cbs.forEach(cb => { cb.checked = !allChecked; });
+            updatePreview();
+        }
+
+        // Ordre canonique des colonnes (reflète l'ordre visuel des groupes)
+        const COL_ORDER = [
+            'Date',
+            'Code Client', 'Nom Client', 'Région',
+            'Code Article', 'Nom Article', 'Catégorie',
+            'Code Commercial', 'Nom Commercial',
+            'Quantité', 'Prix Unitaire', 'Remise (%)', 'Marge Ligne',
+        ];
+
         function getSelectedCols() {
-            const cols = [...OBLIG_COLS];
+            // Collecter toutes les colonnes actives (locked + cochées)
+            const activeNames = new Set();
+
+            // Obligatoires toujours là
+            OBLIG_COLS.forEach(c => activeNames.add(c.nom));
 
             // Optionnelles cochées
             document.querySelectorAll('.col-toggle:not(.locked) input[type=checkbox]').forEach(cb => {
                 if (cb.checked) {
-                    const lbl   = cb.closest('.col-toggle');
-                    const nom   = lbl.dataset.col;
-                    const type  = lbl.dataset.type || 'texte';
-                    const desc  = lbl.dataset.desc || '';
-                    // Insérer à la bonne position (après les obligatoires du même groupe si possible)
-                    cols.push({ nom, type, obligatoire: false, description: desc });
+                    const nom = cb.closest('.col-toggle').dataset.col;
+                    if (nom) activeNames.add(nom);
                 }
             });
 
-            // Colonnes personnalisées
+            // Construire dans l'ordre canonique
+            const cols = [];
+            COL_ORDER.forEach(nom => {
+                if (!activeNames.has(nom)) return;
+                const oblig = OBLIG_COLS.find(c => c.nom === nom);
+                if (oblig) {
+                    cols.push(oblig);
+                } else {
+                    const meta = OPT_COLS_META[nom] || { type: 'texte', description: '' };
+                    cols.push({ nom, type: meta.type, obligatoire: false, description: meta.description });
+                }
+            });
+
+            // Colonnes personnalisées à la fin
             document.querySelectorAll('.perso-row').forEach(row => {
                 const nom  = row.querySelector('.perso-nom').value.trim();
                 const type = row.querySelector('.perso-type').value;
