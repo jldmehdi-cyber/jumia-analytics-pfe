@@ -1910,52 +1910,25 @@ def api_importer_canevas(request, pk):
 # API CANEVAS LIBRE (génération sans configuration préalable)
 # ============================================================
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def api_generer_canevas_libre(request):
     """
     Génère un fichier Excel canevas personnalisé à partir des colonnes
     choisies par l'utilisateur — sans nécessiter de ConfigurationProjet.
-
-    Corps JSON attendu :
-    {
-      "nom_fichier": "mon_canevas",
-      "colonnes": [
-        {"nom": "Date", "type": "date", "obligatoire": true,
-         "description": "Date de la transaction (YYYY-MM-DD)"},
-        {"nom": "Code Client", "type": "texte", "obligatoire": true, ...},
-        ...
-      ]
-    }
     """
-    # Auth : session Django ou JWT
-    user = getattr(request, 'user', None)
-    if not (user and user.is_authenticated):
-        try:
-            from rest_framework_simplejwt.authentication import JWTAuthentication
-            auth_result = JWTAuthentication().authenticate(request)
-            if auth_result:
-                user, _ = auth_result
-            else:
-                return JsonResponse({'detail': 'Non authentifié'}, status=401)
-        except Exception:
-            return JsonResponse({'detail': 'Non authentifié'}, status=401)
-
-    if request.method != 'POST':
-        return JsonResponse({'detail': 'Méthode non autorisée'}, status=405)
-
-    import json
     import pandas as pd
     from io import BytesIO
 
-    try:
-        body = json.loads(request.body)
-    except Exception:
-        return JsonResponse({'detail': 'JSON invalide'}, status=400)
+    body = request.data
+    if not isinstance(body, dict):
+        return Response({'detail': 'JSON invalide'}, status=400)
 
     colonnes = body.get('colonnes', [])
     nom_fichier = body.get('nom_fichier', 'canevas_personnalise').replace(' ', '_')
 
     if not colonnes:
-        return JsonResponse({'detail': 'Au moins une colonne est requise'}, status=400)
+        return Response({'detail': 'Au moins une colonne est requise'}, status=400)
 
     col_noms = [c['nom'] for c in colonnes]
 
