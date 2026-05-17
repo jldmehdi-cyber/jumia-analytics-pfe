@@ -39,6 +39,9 @@ urlpatterns = [
     
     # API Import
     path('api/import/', views.api_import_excel, name='api_import_excel'),
+
+    # API Canevas libre (sans configuration préalable)
+    path('api/canevas/generer/', views.api_generer_canevas_libre, name='api_generer_canevas_libre'),
     
     # API Indicateurs
     path('api/indicateurs/', views.api_indicateurs, name='api_indicateurs'),

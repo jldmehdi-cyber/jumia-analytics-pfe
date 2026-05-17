@@ -1673,6 +1673,196 @@ def api_importer_canevas(request, pk):
 
 
 # ============================================================
+# API CANEVAS LIBRE (génération sans configuration préalable)
+# ============================================================
+
+def api_generer_canevas_libre(request):
+    """
+    Génère un fichier Excel canevas personnalisé à partir des colonnes
+    choisies par l'utilisateur — sans nécessiter de ConfigurationProjet.
+
+    Corps JSON attendu :
+    {
+      "nom_fichier": "mon_canevas",
+      "colonnes": [
+        {"nom": "Date", "type": "date", "obligatoire": true,
+         "description": "Date de la transaction (YYYY-MM-DD)"},
+        {"nom": "Code Client", "type": "texte", "obligatoire": true, ...},
+        ...
+      ]
+    }
+    """
+    # Auth : session Django ou JWT
+    user = getattr(request, 'user', None)
+    if not (user and user.is_authenticated):
+        try:
+            from rest_framework_simplejwt.authentication import JWTAuthentication
+            auth_result = JWTAuthentication().authenticate(request)
+            if auth_result:
+                user, _ = auth_result
+            else:
+                return JsonResponse({'detail': 'Non authentifié'}, status=401)
+        except Exception:
+            return JsonResponse({'detail': 'Non authentifié'}, status=401)
+
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Méthode non autorisée'}, status=405)
+
+    import json
+    import pandas as pd
+    from io import BytesIO
+
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'detail': 'JSON invalide'}, status=400)
+
+    colonnes = body.get('colonnes', [])
+    nom_fichier = body.get('nom_fichier', 'canevas_personnalise').replace(' ', '_')
+
+    if not colonnes:
+        return JsonResponse({'detail': 'Au moins une colonne est requise'}, status=400)
+
+    col_noms = [c['nom'] for c in colonnes]
+
+    # ── Lignes d'exemple (2 lignes) ──────────────────────────
+    EXEMPLES_PAR_TYPE = {
+        'date':        ['2024-01-15', '2024-01-16'],
+        'texte':       ['Exemple 1', 'Exemple 2'],
+        'nombre':      [10, 5],
+        'montant':     [15000, 8500],
+        'pourcentage': [10, 5],
+    }
+    # Correspondances colonnes standard → exemples spécifiques
+    EXEMPLES_SPECIAUX = {
+        'Date':             ['2024-01-15', '2024-01-16'],
+        'Code Client':      ['CLT001', 'CLT002'],
+        'Nom Client':       ['Entreprise Alpha', 'Société Beta'],
+        'Région':           ['Alger', 'Oran'],
+        'Code Article':     ['ART001', 'ART002'],
+        'Nom Article':      ['Produit A', 'Produit B'],
+        'Catégorie':        ['Électronique', 'Maison'],
+        'Code Commercial':  ['COM001', 'COM002'],
+        'Nom Commercial':   ['Ahmed Benali', 'Sara Meziane'],
+        'Quantité':         [5, 3],
+        'Prix Unitaire':    [10000, 15000],
+        'Remise (%)':       [10, 5],
+        'Marge Ligne':      [2500, 1800],
+    }
+
+    rows = []
+    for i in range(2):
+        row = {}
+        for c in colonnes:
+            nom = c['nom']
+            typ = c.get('type', 'texte')
+            if nom in EXEMPLES_SPECIAUX:
+                row[nom] = EXEMPLES_SPECIAUX[nom][i]
+            else:
+                vals = EXEMPLES_PAR_TYPE.get(typ, ['Exemple 1', 'Exemple 2'])
+                row[nom] = vals[i]
+        rows.append(row)
+
+    df = pd.DataFrame(rows, columns=col_noms)
+
+    # ── Feuille Instructions ──────────────────────────────────
+    TYPE_LABELS = {
+        'date': 'Date (YYYY-MM-DD)', 'texte': 'Texte libre',
+        'nombre': 'Nombre entier', 'montant': 'Montant (MAD)',
+        'pourcentage': 'Pourcentage (%)',
+    }
+    instructions = pd.DataFrame({
+        'Colonne':     [c['nom'] for c in colonnes],
+        'Type':        [TYPE_LABELS.get(c.get('type', 'texte'), 'Texte') for c in colonnes],
+        'Obligatoire': ['Oui' if c.get('obligatoire') else 'Non' for c in colonnes],
+        'Description': [c.get('description', '') for c in colonnes],
+    })
+
+    # ── Export Excel ──────────────────────────────────────────
+    output = BytesIO()
+    try:
+        from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Données à saisir', index=False)
+            instructions.to_excel(writer, sheet_name='Instructions', index=False)
+
+            # ── Mise en forme feuille Données ──
+            ws = writer.sheets['Données à saisir']
+
+            ORANGE  = 'F97316'
+            ORANGE_L = 'FFF3E0'
+            GRAY    = 'F0F4FF'
+            RED     = 'EF4444'
+            RED_L   = 'FFF5F5'
+
+            header_fill_oblig = PatternFill('solid', fgColor=ORANGE)
+            header_fill_opt   = PatternFill('solid', fgColor='1E293B')
+            data_fill_oblig   = PatternFill('solid', fgColor=ORANGE_L)
+            data_fill_opt     = PatternFill('solid', fgColor='FAFAFA')
+
+            # Colonnes obligatoires marquées en orange
+            obligatoires = {c['nom'] for c in colonnes if c.get('obligatoire')}
+
+            thin = Side(style='thin', color='DDDDDD')
+            border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+            for ci, col in enumerate(ws.iter_cols(min_row=1, max_row=1), start=1):
+                cell = col[0]
+                is_oblig = cell.value in obligatoires
+                cell.fill      = header_fill_oblig if is_oblig else header_fill_opt
+                cell.font      = Font(bold=True, color='FFFFFF', size=11)
+                cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+                cell.border    = border
+
+            # Lignes d'exemple
+            for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
+                for cell in row:
+                    col_name = ws.cell(1, cell.column).value
+                    is_oblig = col_name in obligatoires
+                    cell.fill      = data_fill_oblig if is_oblig else data_fill_opt
+                    cell.alignment = Alignment(horizontal='left', vertical='center')
+                    cell.border    = border
+
+            # Hauteur header + ajustement largeur colonnes
+            ws.row_dimensions[1].height = 30
+            for col in ws.columns:
+                max_len = max((len(str(c.value or '')) for c in col), default=8)
+                ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 45)
+
+            # Figer la 1ère ligne
+            ws.freeze_panes = 'A2'
+
+            # ── Mise en forme feuille Instructions ──
+            ws2 = writer.sheets['Instructions']
+            instr_fill = PatternFill('solid', fgColor='1E293B')
+            for cell in ws2[1]:
+                cell.fill = instr_fill
+                cell.font = Font(bold=True, color='FFFFFF')
+            for col in ws2.columns:
+                max_len = max((len(str(c.value or '')) for c in col), default=10)
+                ws2.column_dimensions[col[0].column_letter].width = min(max_len + 4, 60)
+
+    except ImportError:
+        # Fallback sans mise en forme si openpyxl absent
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Données à saisir', index=False)
+            instructions.to_excel(writer, sheet_name='Instructions', index=False)
+
+    output.seek(0)
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = (
+        f'attachment; filename="{nom_fichier}.xlsx"'
+    )
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+    return response
+
+
+# ============================================================
 # API WIDGETS
 # ============================================================
 
