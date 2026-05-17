@@ -1402,7 +1402,241 @@ def api_export_csv(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def api_import_excel(request):
-    return Response({'status': 'Utilisez le canevas de saisie via le configurateur'})
+    """
+    Import flexible d'un fichier Excel (.xlsx/.xls) ou CSV.
+    Détecte automatiquement les colonnes quelle que soit leur orthographe.
+    Crée une ConfigurationProjet par défaut si l'utilisateur n'en a pas.
+
+    POST multipart/form-data  :  file=<fichier>
+    Réponse JSON :
+    {
+      "imported": 42, "errors": 0, "skipped": 1,
+      "total_rows": 43, "colonnes_detectees": [...],
+      "messages_erreurs": [...], "config_id": 1
+    }
+    """
+    # ── Auth : session Django ou JWT ────────────────────────
+    user = getattr(request, 'user', None)
+    if not (user and user.is_authenticated):
+        try:
+            from rest_framework_simplejwt.authentication import JWTAuthentication
+            auth_result = JWTAuthentication().authenticate(request)
+            if auth_result:
+                user, _ = auth_result
+            else:
+                return JsonResponse({'error': 'Non authentifié'}, status=401)
+        except Exception:
+            return JsonResponse({'error': 'Non authentifié'}, status=401)
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
+    fichier = request.FILES.get('file')
+    if not fichier:
+        return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
+
+    import pandas as pd
+    import unicodedata, re
+
+    # ── Lecture du fichier ───────────────────────────────────
+    nom = fichier.name.lower()
+    try:
+        if nom.endswith('.csv'):
+            # Essai UTF-8, puis latin-1
+            try:
+                df = pd.read_csv(fichier, sep=None, engine='python', dtype=str)
+            except Exception:
+                fichier.seek(0)
+                df = pd.read_csv(fichier, sep=None, engine='python', dtype=str, encoding='latin-1')
+        elif nom.endswith(('.xlsx', '.xls')):
+            df = pd.read_excel(fichier, dtype=str)
+        else:
+            return JsonResponse({'error': 'Format non supporté. Utilisez .xlsx, .xls ou .csv'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': f'Impossible de lire le fichier : {e}'}, status=400)
+
+    if df.empty:
+        return JsonResponse({'error': 'Le fichier est vide'}, status=400)
+
+    # ── Normalisation des noms de colonnes ───────────────────
+    def normalize(s):
+        """Minuscule, supprime accents, espaces → underscore."""
+        s = str(s).strip().lower()
+        s = unicodedata.normalize('NFD', s)
+        s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+        s = re.sub(r'[\s\-\/\(\)%\']+', '_', s)
+        s = re.sub(r'_+', '_', s).strip('_')
+        return s
+
+    col_map = {normalize(c): c for c in df.columns}
+
+    # ── Table de correspondance normalisé → champ Django ────
+    ALIASES = {
+        'date_transaction':  ['date', 'date_transaction', 'date_commande', 'date_vente',
+                               'transaction_date', 'order_date'],
+        'code_client':       ['code_client', 'client_code', 'codeclient', 'id_client',
+                               'client_id', 'num_client'],
+        'nom_client':        ['nom_client', 'client', 'nom', 'raison_sociale', 'customer',
+                               'name', 'entreprise'],
+        'region':            ['region', 'zone', 'wilaya', 'departement', 'secteur', 'area', 'city'],
+        'code_article':      ['code_article', 'article_code', 'codearticle', 'reference',
+                               'ref', 'sku', 'code_produit', 'product_code'],
+        'nom_article':       ['nom_article', 'article', 'produit', 'product', 'designation',
+                               'libelle', 'description', 'label'],
+        'categorie':         ['categorie', 'category', 'famille', 'family', 'type_produit',
+                               'product_type', 'gamme'],
+        'code_commercial':   ['code_commercial', 'commercial_code', 'code_vendeur',
+                               'vendeur_code', 'salesperson_id', 'rep_code'],
+        'nom_commercial':    ['nom_commercial', 'commercial', 'vendeur', 'salesperson',
+                               'representant', 'agent'],
+        'quantite':          ['quantite', 'qty', 'quantity', 'qte', 'nb', 'nombre_unites',
+                               'units', 'volume'],
+        'prix_unitaire':     ['prix_unitaire', 'pu', 'price', 'unit_price', 'tarif',
+                               'prix', 'montant_unitaire'],
+        'remise':            ['remise', 'remise_pourcentage', 'discount', 'reduction',
+                               'taux_remise', 'discount_rate', 'pct_remise'],
+        'ca_ligne':          ['ca_ligne', 'ca', 'montant', 'chiffre_affaires', 'amount',
+                               'total', 'revenue', 'ca_ht', 'turnover'],
+        'marge_ligne':       ['marge_ligne', 'marge', 'margin', 'profit', 'benefice',
+                               'gross_margin'],
+    }
+
+    def find_col(field):
+        """Retourne le nom de colonne original dans df pour un champ Django."""
+        for alias in ALIASES.get(field, []):
+            if alias in col_map:
+                return col_map[alias]
+        return None
+
+    mapping = {field: find_col(field) for field in ALIASES}
+    detected = [v for v in mapping.values() if v]
+
+    # Vérifier colonnes minimales
+    required = ['date_transaction', 'code_client', 'code_article']
+    missing = [f for f in required if not mapping[f]]
+    if missing:
+        return JsonResponse({
+            'error': f'Colonnes obligatoires non trouvées : {", ".join(missing)}. '
+                     f'Colonnes détectées dans le fichier : {list(df.columns)}',
+            'colonnes_fichier': list(df.columns),
+        }, status=400)
+
+    # ── Configuration par défaut ─────────────────────────────
+    config = ConfigurationProjet.objects.filter(created_by=user).first()
+    if not config:
+        config = ConfigurationProjet.objects.create(
+            nom_projet='Import direct',
+            description='Configuration créée automatiquement lors du premier import',
+            created_by=user,
+        )
+
+    # ── Import ligne par ligne ───────────────────────────────
+    imported = 0
+    skipped  = 0
+    errors   = []
+
+    def safe_float(val, default=0.0):
+        try:
+            if pd.isna(val): return default
+            return float(str(val).replace(',', '.').replace(' ', ''))
+        except Exception:
+            return default
+
+    def safe_str(val, default=''):
+        try:
+            if pd.isna(val): return default
+            return str(val).strip()
+        except Exception:
+            return default
+
+    def safe_date(val):
+        try:
+            if pd.isna(val): return None
+            return pd.to_datetime(val, dayfirst=True).date()
+        except Exception:
+            return None
+
+    # Champs extras (colonnes non mappées → champs_personnalises)
+    mapped_cols = set(v for v in mapping.values() if v)
+    extra_cols  = [c for c in df.columns if c not in mapped_cols]
+
+    bulk_list = []
+    for idx, row in df.iterrows():
+        try:
+            date_val = safe_date(row.get(mapping['date_transaction']))
+            if date_val is None:
+                skipped += 1
+                continue
+
+            code_client  = safe_str(row.get(mapping['code_client'], ''))
+            code_article = safe_str(row.get(mapping['code_article'], ''))
+            if not code_client or not code_article:
+                skipped += 1
+                continue
+
+            quantite     = safe_float(row.get(mapping['quantite']) if mapping['quantite'] else None, 1.0)
+            prix_unit    = safe_float(row.get(mapping['prix_unitaire']) if mapping['prix_unitaire'] else None, 0.0)
+            remise       = safe_float(row.get(mapping['remise']) if mapping['remise'] else None, 0.0)
+
+            # CA : lu dans le fichier ou calculé
+            if mapping['ca_ligne'] and not pd.isna(row.get(mapping['ca_ligne'], float('nan'))):
+                ca = safe_float(row.get(mapping['ca_ligne']))
+            else:
+                ca = quantite * prix_unit * (1 - remise / 100)
+
+            # Marge : lu dans le fichier ou estimée à 25%
+            if mapping['marge_ligne'] and not pd.isna(row.get(mapping['marge_ligne'], float('nan'))):
+                marge = safe_float(row.get(mapping['marge_ligne']))
+            else:
+                marge = ca * 0.25
+
+            extra = {}
+            for ec in extra_cols:
+                v = row.get(ec)
+                if v is not None and not (isinstance(v, float) and pd.isna(v)):
+                    extra[ec] = safe_str(v)
+
+            bulk_list.append(DonneeBrute(
+                config=config,
+                date_transaction=date_val,
+                code_client=code_client[:50],
+                nom_client=safe_str(row.get(mapping['nom_client'], ''))[:200] if mapping['nom_client'] else '',
+                region=safe_str(row.get(mapping['region'], ''))[:100] if mapping['region'] else '',
+                code_article=code_article[:50],
+                nom_article=safe_str(row.get(mapping['nom_article'], ''))[:200] if mapping['nom_article'] else '',
+                categorie=safe_str(row.get(mapping['categorie'], ''))[:100] if mapping['categorie'] else '',
+                code_commercial=safe_str(row.get(mapping['code_commercial'], ''))[:50] if mapping['code_commercial'] else '',
+                nom_commercial=safe_str(row.get(mapping['nom_commercial'], ''))[:200] if mapping['nom_commercial'] else '',
+                quantite=quantite,
+                prix_unitaire=prix_unit,
+                remise=remise,
+                ca_ligne=round(ca, 2),
+                marge_ligne=round(marge, 2),
+                champs_personnalises=extra,
+            ))
+            imported += 1
+
+        except Exception as e:
+            errors.append(f'Ligne {idx + 2} : {str(e)}')
+            if len(errors) >= 20:
+                errors.append('… (trop d\'erreurs, arrêt du journal)')
+                break
+
+    # Bulk insert pour la performance
+    if bulk_list:
+        DonneeBrute.objects.bulk_create(bulk_list, batch_size=500)
+
+    return JsonResponse({
+        'imported':          imported,
+        'skipped':           skipped,
+        'errors':            len(errors),
+        'total_rows':        len(df),
+        'colonnes_detectees': detected,
+        'colonnes_non_mappees': extra_cols,
+        'messages_erreurs':  errors,
+        'config_id':         config.id_config,
+        'config_nom':        config.nom_projet,
+    })
 
 
 # ============================================================

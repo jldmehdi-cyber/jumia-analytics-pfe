@@ -535,6 +535,100 @@
         .chat-input input:focus { border-color: var(--orange); }
 
         /* ══════════════════════════════
+           IMPORT MODAL
+        ══════════════════════════════ */
+        .import-modal-overlay {
+            position: fixed; inset: 0; z-index: 800;
+            background: rgba(0,0,0,.65);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none;
+            transition: opacity .2s;
+        }
+        .import-modal-overlay.open { opacity: 1; pointer-events: all; }
+
+        .import-modal {
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 18px; width: 90%; max-width: 580px;
+            box-shadow: 0 24px 60px rgba(0,0,0,.6);
+            transform: translateY(20px);
+            transition: transform .25s;
+        }
+        .import-modal-overlay.open .import-modal { transform: translateY(0); }
+
+        .import-modal-hdr {
+            padding: 20px 24px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .import-modal-hdr h3 {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 16px; font-weight: 700;
+        }
+        .import-modal-body { padding: 24px; }
+
+        .drop-zone {
+            border: 2px dashed var(--border); border-radius: 14px;
+            padding: 40px 24px; text-align: center;
+            cursor: pointer; transition: all .2s;
+            background: var(--bg3);
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--orange); background: rgba(249,115,22,.06);
+        }
+        .drop-zone i { font-size: 44px; color: var(--orange); margin-bottom: 12px; display: block; }
+        .drop-zone h4 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+        .drop-zone p  { font-size: 13px; color: var(--text2); }
+        .drop-zone .file-types {
+            display: flex; gap: 8px; justify-content: center; margin-top: 12px;
+        }
+        .file-type-badge {
+            font-size: 11px; font-weight: 600; padding: 3px 10px;
+            border-radius: 20px; border: 1px solid;
+        }
+        .file-type-badge.xlsx { background: rgba(34,197,94,.1); color: var(--green); border-color: rgba(34,197,94,.3); }
+        .file-type-badge.csv  { background: rgba(59,130,246,.1); color: var(--blue);  border-color: rgba(59,130,246,.3); }
+
+        .import-progress {
+            margin-top: 20px; display: none;
+        }
+        .progress-bar-wrap {
+            height: 6px; background: var(--bg4); border-radius: 3px; overflow: hidden; margin: 8px 0;
+        }
+        .progress-bar-fill {
+            height: 100%; border-radius: 3px;
+            background: linear-gradient(90deg, var(--orange), var(--yellow));
+            transition: width .4s ease;
+        }
+
+        .import-result-card {
+            margin-top: 16px; padding: 16px 18px;
+            border-radius: 12px; border: 1px solid;
+            display: none;
+        }
+        .import-result-card.success { background: rgba(34,197,94,.07); border-color: rgba(34,197,94,.25); }
+        .import-result-card.error   { background: rgba(239,68,68,.07);  border-color: rgba(239,68,68,.25); }
+
+        .result-stats {
+            display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 12px;
+        }
+        .result-stat { text-align: center; }
+        .result-stat .val { font-size: 24px; font-weight: 800; }
+        .result-stat .lbl { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .4px; }
+
+        .detected-cols {
+            display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;
+        }
+        .col-chip {
+            font-size: 11px; padding: 2px 9px; border-radius: 20px;
+            background: var(--bg4); color: var(--text2); border: 1px solid var(--border);
+        }
+        .col-chip.mapped { background: rgba(34,197,94,.1); color: var(--green); border-color: rgba(34,197,94,.25); }
+
+        .error-list {
+            margin-top: 10px; font-size: 12px; color: var(--red);
+            max-height: 100px; overflow-y: auto;
+        }
+
+        /* ══════════════════════════════
            LOADING
         ══════════════════════════════ */
         .spinner {
@@ -619,6 +713,12 @@
 
     <div class="sidebar-section">
         <div class="sidebar-label">Outils</div>
+        <div class="nav-item" onclick="openImportModal()" style="color:var(--green)">
+            <div class="nav-icon" style="background:rgba(34,197,94,.15);color:var(--green)">
+                <i class="fas fa-file-upload"></i>
+            </div>
+            Importer données
+        </div>
         <div class="nav-item" onclick="window.location.href='/configurator/'">
             <div class="nav-icon"><i class="fas fa-sliders-h"></i></div>
             Configurateur KPI
@@ -654,6 +754,9 @@
             </select>
             <button class="btn btn-ghost" onclick="onFilterChange()">
                 <i class="fas fa-sync-alt"></i> Actualiser
+            </button>
+            <button class="btn btn-primary" onclick="openImportModal()" title="Importer un fichier Excel ou CSV">
+                <i class="fas fa-file-upload"></i> Importer
             </button>
         </div>
     </header>
@@ -919,6 +1022,76 @@
 
     </div><!-- /content -->
 </main>
+
+<!-- ═══════════ IMPORT MODAL ═══════════ -->
+<div class="import-modal-overlay" id="import-overlay" onclick="closeImportModal(event)">
+    <div class="import-modal" onclick="event.stopPropagation()">
+        <div class="import-modal-hdr">
+            <h3>
+                <span style="width:34px;height:34px;background:rgba(34,197,94,.15);color:var(--green);
+                             border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px">
+                    <i class="fas fa-file-upload"></i>
+                </span>
+                Importer des données
+            </h3>
+            <button style="background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;line-height:1"
+                    onclick="closeImportModal()">×</button>
+        </div>
+        <div class="import-modal-body">
+            <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
+                Déposez votre fichier de données — le système détecte automatiquement les colonnes
+                quelle que soit leur orthographe (<em>Date, date, DATE, Date Transaction…</em>).
+            </p>
+
+            <!-- Zone de dépôt -->
+            <div class="drop-zone" id="import-drop-zone"
+                 onclick="document.getElementById('import-file-input').click()"
+                 ondragover="importDragOver(event)"
+                 ondragleave="importDragLeave()"
+                 ondrop="importDrop(event)">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <h4 id="import-drop-label">Déposez votre fichier ici</h4>
+                <p>ou cliquez pour parcourir</p>
+                <div class="file-types">
+                    <span class="file-type-badge xlsx"><i class="fas fa-file-excel"></i> Excel .xlsx</span>
+                    <span class="file-type-badge xlsx"><i class="fas fa-file-excel"></i> Excel .xls</span>
+                    <span class="file-type-badge csv"><i class="fas fa-file-csv"></i> CSV .csv</span>
+                </div>
+                <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv"
+                       style="display:none" onchange="importFileSelected(event)">
+            </div>
+
+            <!-- Progression -->
+            <div class="import-progress" id="import-progress">
+                <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text2)">
+                    <span id="import-progress-label">Envoi en cours…</span>
+                    <span id="import-progress-pct">0%</span>
+                </div>
+                <div class="progress-bar-wrap">
+                    <div class="progress-bar-fill" id="import-progress-bar" style="width:0%"></div>
+                </div>
+            </div>
+
+            <!-- Résultats -->
+            <div class="import-result-card" id="import-result">
+                <div class="result-stats" id="import-result-stats"></div>
+                <div style="font-size:12px;color:var(--text2);margin-bottom:8px">
+                    <strong>Colonnes mappées :</strong>
+                </div>
+                <div class="detected-cols" id="import-detected-cols"></div>
+                <div class="error-list" id="import-error-list"></div>
+            </div>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid var(--border);
+                    display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:12px;color:var(--text2)">
+                <i class="fas fa-info-circle"></i>
+                Colonnes obligatoires : Date, Code Client, Code Article
+            </span>
+            <button class="btn btn-ghost" onclick="closeImportModal()">Fermer</button>
+        </div>
+    </div>
+</div>
 
 <!-- ═══════════ CHATBOT ═══════════ -->
 <button class="chatbot-fab" onclick="toggleChat()" title="Assistant IA">
@@ -1443,6 +1616,172 @@ async function exportData(format) {
     } finally {
         const labels = { excel: '<i class="fas fa-file-excel"></i> Excel', csv: '<i class="fas fa-file-csv"></i> CSV' };
         btns.forEach(b => { b.disabled = false; b.innerHTML = labels[format]; });
+    }
+}
+
+/* ────────────────────────────────
+   IMPORT MODAL
+──────────────────────────────── */
+function openImportModal() {
+    document.getElementById('import-overlay').classList.add('open');
+    resetImportModal();
+}
+function closeImportModal(e) {
+    if (e && e.target !== document.getElementById('import-overlay')) return;
+    document.getElementById('import-overlay').classList.remove('open');
+}
+
+function resetImportModal() {
+    document.getElementById('import-drop-label').textContent = 'Déposez votre fichier ici';
+    document.getElementById('import-progress').style.display  = 'none';
+    document.getElementById('import-result').style.display    = 'none';
+    document.getElementById('import-file-input').value        = '';
+    document.getElementById('import-drop-zone').classList.remove('drag-over');
+}
+
+function importDragOver(e) {
+    e.preventDefault();
+    document.getElementById('import-drop-zone').classList.add('drag-over');
+}
+function importDragLeave() {
+    document.getElementById('import-drop-zone').classList.remove('drag-over');
+}
+function importDrop(e) {
+    e.preventDefault();
+    importDragLeave();
+    const file = e.dataTransfer.files[0];
+    if (file) doImport(file);
+}
+function importFileSelected(e) {
+    const file = e.target.files[0];
+    if (file) doImport(file);
+}
+
+async function doImport(file) {
+    // Vérification extension
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['xlsx', 'xls', 'csv'].includes(ext)) {
+        showImportResult('error', null, null, 'Format non supporté. Utilisez .xlsx, .xls ou .csv');
+        return;
+    }
+
+    // UI: nom du fichier + progression
+    document.getElementById('import-drop-label').textContent = `📄 ${file.name}`;
+    const progress = document.getElementById('import-progress');
+    progress.style.display = 'block';
+    document.getElementById('import-result').style.display = 'none';
+
+    // Animation progression indéterminée
+    let pct = 0;
+    const progBar   = document.getElementById('import-progress-bar');
+    const progLabel = document.getElementById('import-progress-label');
+    const progPct   = document.getElementById('import-progress-pct');
+
+    progLabel.textContent = 'Lecture et analyse du fichier…';
+    const timer = setInterval(() => {
+        pct = Math.min(pct + Math.random() * 8, 85);
+        progBar.style.width = pct + '%';
+        progPct.textContent  = Math.round(pct) + '%';
+    }, 200);
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await fetch('/api/import/', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData,
+        });
+
+        clearInterval(timer);
+        progBar.style.width = '100%';
+        progPct.textContent  = '100%';
+        progLabel.textContent = 'Traitement terminé';
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            showImportResult('error', null, null, data.error || `Erreur ${res.status}`);
+            return;
+        }
+
+        showImportResult('success', data, file.name);
+
+        // Rafraîchit le dashboard après un import réussi
+        if (data.imported > 0) {
+            setTimeout(() => {
+                loadDashboard();
+                const activeTab = document.querySelector('.tab-content.active')?.id?.replace('tab-', '');
+                if (activeTab && activeTab !== 'dashboard') onFilterChange();
+            }, 1500);
+        }
+
+    } catch (err) {
+        clearInterval(timer);
+        showImportResult('error', null, null, 'Erreur réseau : ' + err.message);
+    }
+}
+
+function showImportResult(type, data, filename, errorMsg) {
+    const card  = document.getElementById('import-result');
+    const stats = document.getElementById('import-result-stats');
+    const cols  = document.getElementById('import-detected-cols');
+    const errs  = document.getElementById('import-error-list');
+
+    card.className  = `import-result-card ${type}`;
+    card.style.display = 'block';
+
+    if (type === 'error') {
+        stats.innerHTML = `<div style="color:var(--red);font-size:14px;font-weight:600">
+            <i class="fas fa-times-circle"></i> ${errorMsg}
+        </div>`;
+        cols.innerHTML = '';
+        errs.innerHTML = '';
+        return;
+    }
+
+    // Succès
+    const okColor   = data.imported > 0 ? 'var(--green)' : 'var(--text2)';
+    const skipColor = data.skipped  > 0 ? 'var(--yellow)' : 'var(--text2)';
+    const errColor  = data.errors   > 0 ? 'var(--red)'    : 'var(--text2)';
+
+    stats.innerHTML = `
+        <div class="result-stat">
+            <div class="val" style="color:${okColor}">${data.imported}</div>
+            <div class="lbl">Importées</div>
+        </div>
+        <div class="result-stat">
+            <div class="val" style="color:${skipColor}">${data.skipped}</div>
+            <div class="lbl">Ignorées</div>
+        </div>
+        <div class="result-stat">
+            <div class="val" style="color:${errColor}">${data.errors}</div>
+            <div class="lbl">Erreurs</div>
+        </div>
+        <div class="result-stat">
+            <div class="val" style="color:var(--text2)">${data.total_rows}</div>
+            <div class="lbl">Total lignes</div>
+        </div>`;
+
+    // Colonnes détectées
+    const allCols = [
+        ...(data.colonnes_detectees || []).map(c => `<span class="col-chip mapped"><i class="fas fa-check" style="font-size:9px"></i> ${c}</span>`),
+        ...(data.colonnes_non_mappees || []).map(c => `<span class="col-chip" title="Colonne conservée dans champs personnalisés">${c}</span>`),
+    ];
+    cols.innerHTML = allCols.join('') || '<span style="color:var(--text2);font-size:12px">—</span>';
+
+    // Erreurs
+    errs.innerHTML = (data.messages_erreurs || []).length
+        ? data.messages_erreurs.map(e => `<div>⚠ ${e}</div>`).join('')
+        : '';
+
+    // Message résumé
+    if (data.imported > 0) {
+        errs.innerHTML = `<div style="color:var(--green);font-size:13px;margin-top:8px;font-weight:600">
+            <i class="fas fa-check-circle"></i>
+            ${data.imported} ligne${data.imported > 1 ? 's' : ''} ajoutée${data.imported > 1 ? 's' : ''} — dashboard mis à jour
+        </div>` + errs.innerHTML;
     }
 }
 
