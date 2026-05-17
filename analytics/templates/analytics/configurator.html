@@ -1090,6 +1090,14 @@
 
             const p = presets[type];
             if (!p) return;
+
+            // Vérifier si un KPI de même nom existe déjà
+            const doublon = indicateurs.find(i => i.nom.trim().toLowerCase() === p.nom.trim().toLowerCase());
+            if (doublon) {
+                showAlert('error', `"${p.nom}" est déjà dans vos KPIs.`);
+                return;
+            }
+
             p.code = p.nom.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now();
 
             const res = await apiFetch(`${API_BASE}/indicateurs/`, { method: 'POST', body: JSON.stringify(p) });
