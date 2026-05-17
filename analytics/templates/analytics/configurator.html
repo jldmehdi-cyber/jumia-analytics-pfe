@@ -273,6 +273,7 @@
         .alert.show { display: flex; }
         .alert-success { background: rgba(34, 197, 94, 0.1); border: 1px solid var(--success); color: var(--success); }
         .alert-error { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); color: var(--danger); }
+        .alert-info { background: rgba(249, 115, 22, 0.08); border: 1px solid var(--accent); color: var(--accent); }
 
         .two-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
@@ -403,6 +404,9 @@
         </div>
         <div class="alert alert-error" id="alert-error">
             <i class="fas fa-exclamation-circle"></i> <span id="error-msg"></span>
+        </div>
+        <div class="alert alert-info" id="alert-info">
+            <i class="fas fa-info-circle"></i> <span id="info-msg"></span>
         </div>
 
         <!-- Tabs -->
@@ -1094,7 +1098,7 @@
             // Vérifier si un KPI de même nom existe déjà
             const doublon = indicateurs.find(i => i.nom.trim().toLowerCase() === p.nom.trim().toLowerCase());
             if (doublon) {
-                showAlert('error', `"${p.nom}" est déjà dans vos KPIs.`);
+                showAlert('info', `Le KPI "${p.nom}" existe déjà dans votre liste.`);
                 return;
             }
 
