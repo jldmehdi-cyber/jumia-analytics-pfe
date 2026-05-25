@@ -1,0 +1,35 @@
+# System & sensitive files - keep only project assets
+NTUSER.DAT*
+ntuser.*
+AppData/
+.claude/
+.claude.json*
+.config/
+.android/
+.VirtualBox/
+.vscode*/
+.kimi-webbridge/
+.idlerc/
+.railway/
+.python_history
+.bash_history
+.gitconfig
+*.TM.blf
+*.TMContainer*
+*.exe
+*.LOG1
+*.LOG2
+IntelGraphicsProfiles/
+Contacts/
+Favorites/
+Links/
+Music/
+Saved Games/
+Searches/
+Videos/
+VirtualBox VMs/
+Documents/
+Downloads/
+cd
+npm
+windows
