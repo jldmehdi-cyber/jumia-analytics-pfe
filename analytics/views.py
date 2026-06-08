@@ -81,6 +81,25 @@ def health_check(request):
         status=200
     )
 
+def db_check(request):
+    """Diagnostic DB — vérifie la connexion et le compte admin."""
+    import json as _json
+    from datetime import datetime
+    result = {'timestamp': datetime.now().isoformat(), 'db': 'unknown', 'admin_exists': False, 'error': None}
+    try:
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        result['db'] = 'ok'
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        result['admin_exists'] = User.objects.filter(username='admin').exists()
+        result['user_count'] = User.objects.count()
+    except Exception as e:
+        result['db'] = 'error'
+        result['error'] = str(e)
+    return HttpResponse(_json.dumps(result), content_type='application/json', status=200)
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def api_reset_password(request):
