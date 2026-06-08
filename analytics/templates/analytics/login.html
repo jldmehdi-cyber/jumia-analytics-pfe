@@ -155,6 +155,89 @@
         }
 
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        .forgot-link {
+            display: block;
+            text-align: right;
+            margin-top: -12px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: var(--accent);
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .forgot-link:hover { text-decoration: underline; }
+
+        /* Modal réinitialisation */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 36px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        .modal-box h2 {
+            font-size: 20px;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .modal-box h2 i { color: var(--accent); }
+        .modal-subtitle {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 24px;
+        }
+        .modal-close {
+            position: absolute;
+            top: 16px; right: 16px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+        .modal-close:hover { background: var(--bg-card); color: var(--text-primary); }
+        .reset-success {
+            display: none;
+            background: rgba(34,197,94,0.1);
+            border: 1px solid #22c55e;
+            color: #22c55e;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .reset-success.show { display: block; }
+        .reset-error {
+            display: none;
+            background: rgba(239,68,68,0.1);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .reset-error.show { display: block; }
     </style>
 </head>
 <body>
@@ -179,6 +262,10 @@
                 <input type="password" id="password" name="password" placeholder="admin123" required autocomplete="current-password">
             </div>
 
+            <a class="forgot-link" onclick="openResetModal()">
+                <i class="fas fa-key"></i> Mot de passe oublié ?
+            </a>
+
             <button type="submit" class="btn-login" id="btn-login">
                 <span>Se connecter</span>
             </button>
@@ -194,6 +281,40 @@
         <div class="login-footer">
             <p>PFE Big Data Analytics — 2025</p>
             <p style="margin-top: 8px; font-size: 12px;">Django 5.2 LTS • PostgreSQL • Scikit-learn</p>
+        </div>
+    </div>
+
+    <!-- Modal Réinitialisation mot de passe -->
+    <div class="modal-overlay" id="reset-modal" onclick="closeResetOnOverlay(event)">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeResetModal()"><i class="fas fa-times"></i></button>
+            <h2><i class="fas fa-lock-open"></i> Réinitialiser le mot de passe</h2>
+            <p class="modal-subtitle">Entrez votre nom d'utilisateur et choisissez un nouveau mot de passe.</p>
+
+            <div class="reset-success" id="reset-success-msg">
+                <i class="fas fa-check-circle"></i> <span id="reset-success-text"></span>
+            </div>
+            <div class="reset-error" id="reset-error-msg">
+                <i class="fas fa-exclamation-circle"></i> <span id="reset-error-text"></span>
+            </div>
+
+            <form id="reset-form" onsubmit="handleReset(event)">
+                <div class="form-group">
+                    <label for="r-username">Nom d'utilisateur</label>
+                    <input type="text" id="r-username" placeholder="admin" required>
+                </div>
+                <div class="form-group">
+                    <label for="r-newpwd">Nouveau mot de passe</label>
+                    <input type="password" id="r-newpwd" placeholder="Min. 6 caractères" required>
+                </div>
+                <div class="form-group">
+                    <label for="r-confirmpwd">Confirmer le mot de passe</label>
+                    <input type="password" id="r-confirmpwd" placeholder="Répéter le mot de passe" required>
+                </div>
+                <button type="submit" class="btn-login" id="btn-reset">
+                    <span>Réinitialiser</span>
+                </button>
+            </form>
         </div>
     </div>
 
@@ -234,6 +355,67 @@
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<span>Se connecter</span>';
+            }
+        }
+
+        /* ── Modal Réinitialisation ── */
+        function openResetModal() {
+            document.getElementById('reset-modal').classList.add('open');
+            document.getElementById('reset-success-msg').classList.remove('show');
+            document.getElementById('reset-error-msg').classList.remove('show');
+            document.getElementById('reset-form').reset();
+            document.getElementById('r-username').focus();
+        }
+
+        function closeResetModal() {
+            document.getElementById('reset-modal').classList.remove('open');
+        }
+
+        function closeResetOnOverlay(e) {
+            if (e.target === document.getElementById('reset-modal')) closeResetModal();
+        }
+
+        async function handleReset(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-reset');
+            const username = document.getElementById('r-username').value.trim();
+            const newPwd = document.getElementById('r-newpwd').value;
+            const confirmPwd = document.getElementById('r-confirmpwd').value;
+            const successMsg = document.getElementById('reset-success-msg');
+            const successText = document.getElementById('reset-success-text');
+            const errorMsg = document.getElementById('reset-error-msg');
+            const errorText = document.getElementById('reset-error-text');
+
+            successMsg.classList.remove('show');
+            errorMsg.classList.remove('show');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Réinitialisation...';
+
+            try {
+                const res = await fetch('/api/auth/reset-password/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, new_password: newPwd, confirm_password: confirmPwd })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    successText.textContent = data.success + ' Vous pouvez maintenant vous connecter.';
+                    successMsg.classList.add('show');
+                    document.getElementById('reset-form').reset();
+                    // Pré-remplir le champ username sur le formulaire de connexion
+                    document.getElementById('username').value = username;
+                    setTimeout(closeResetModal, 2500);
+                } else {
+                    errorText.textContent = data.error || 'Une erreur est survenue.';
+                    errorMsg.classList.add('show');
+                }
+            } catch (err) {
+                errorText.textContent = 'Erreur de connexion au serveur.';
+                errorMsg.classList.add('show');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Réinitialiser</span>';
             }
         }
     </script>

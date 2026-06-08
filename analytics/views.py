@@ -79,6 +79,33 @@ def health_check(request):
         status=200
     )
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def api_reset_password(request):
+    """Réinitialise le mot de passe d'un utilisateur (sans email)."""
+    username = request.data.get('username', '').strip()
+    new_password = request.data.get('new_password', '').strip()
+    confirm_password = request.data.get('confirm_password', '').strip()
+
+    if not username or not new_password or not confirm_password:
+        return Response({'error': 'Tous les champs sont obligatoires.'}, status=400)
+
+    if new_password != confirm_password:
+        return Response({'error': 'Les mots de passe ne correspondent pas.'}, status=400)
+
+    if len(new_password) < 6:
+        return Response({'error': 'Le mot de passe doit contenir au moins 6 caractères.'}, status=400)
+
+    User = get_user_model()
+    try:
+        user = User.objects.get(username=username)
+    except User.DoesNotExist:
+        return Response({'error': "Nom d'utilisateur introuvable."}, status=404)
+
+    user.set_password(new_password)
+    user.save()
+    return Response({'success': 'Mot de passe réinitialisé avec succès.'}, status=200)
+
 
 # ============================================================
 # HELPERS

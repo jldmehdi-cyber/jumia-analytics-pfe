@@ -11,6 +11,7 @@ urlpatterns = [
     # API Auth
     path('api/auth/login/', views.api_login, name='api_login'),
     path('api/health/', views.health_check, name='health_check'),
+    path('api/auth/reset-password/', views.api_reset_password, name='api_reset_password'),
     
     # API KPIs
     path('api/kpis/', views.api_kpis, name='api_kpis'),
