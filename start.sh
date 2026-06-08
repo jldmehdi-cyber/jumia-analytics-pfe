@@ -20,5 +20,8 @@ u.save()
 print('Admin OK — mot de passe : admin123')
 "
 
+echo "==> Collectstatic..."
+python manage.py collectstatic --noinput --clear
+
 echo "==> Starting Gunicorn..."
-exec gunicorn jumia_analytics.wsgi --workers 4 --timeout 120
+exec gunicorn jumia_analytics.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --timeout 120 --preload

@@ -394,25 +394,27 @@
             try {
                 const res = await fetch('/api/auth/reset-password/', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                     body: JSON.stringify({ username, new_password: newPwd, confirm_password: confirmPwd })
                 });
-                const data = await res.json();
+
+                let data = {};
+                try { data = await res.json(); } catch (_) {}
 
                 if (res.ok && data.success) {
                     successText.textContent = data.success + ' Vous pouvez maintenant vous connecter.';
                     successMsg.classList.add('show');
                     document.getElementById('reset-form').reset();
-                    // Pré-remplir le champ username sur le formulaire de connexion
                     document.getElementById('username').value = username;
                     setTimeout(closeResetModal, 2500);
                 } else {
-                    errorText.textContent = data.error || 'Une erreur est survenue.';
+                    errorText.textContent = data.error || ('Erreur ' + res.status + ' — réessayez.');
                     errorMsg.classList.add('show');
                 }
             } catch (err) {
-                errorText.textContent = 'Erreur de connexion au serveur.';
+                errorText.textContent = 'Impossible de joindre le serveur. Vérifiez votre connexion.';
                 errorMsg.classList.add('show');
+                console.error('Reset error:', err);
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<span>Réinitialiser</span>';
