@@ -59,16 +59,18 @@ def dashboard(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def api_login(request):
-    username = request.data.get('username')
-    password = request.data.get('password')
-    user = authenticate(username=username, password=password)
-    if user:
-        # Créer aussi une session Django → cookie sessionid dans le navigateur
-        # Cela permet l'accès direct aux exports sans token dans l'URL
-        login(request, user)
-        refresh = RefreshToken.for_user(user)
-        return Response({'refresh': str(refresh), 'access': str(refresh.access_token)})
-    return Response({'error': 'Identifiants invalides'}, status=401)
+    try:
+        username = request.data.get('username')
+        password = request.data.get('password')
+        user = authenticate(username=username, password=password)
+        if user:
+            login(request, user)
+            refresh = RefreshToken.for_user(user)
+            return Response({'refresh': str(refresh), 'access': str(refresh.access_token)})
+        return Response({'error': 'Identifiants invalides'}, status=401)
+    except Exception as e:
+        import traceback
+        return Response({'error': f'Erreur serveur: {str(e)}', 'detail': traceback.format_exc()}, status=500)
 
 def health_check(request):
     """Health check - plain Django view (no DRF, no DB, no auth)."""
