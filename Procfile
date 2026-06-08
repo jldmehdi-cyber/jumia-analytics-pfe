@@ -1,1 +1,1 @@
-web: gunicorn jumia_analytics.wsgi
+web: bash start.sh
