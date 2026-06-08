@@ -2,7 +2,7 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "python manage.py migrate --noinput && python manage.py collectstatic --noinput --clear && gunicorn jumia_analytics.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --preload"
+startCommand = "python manage.py migrate --noinput && python manage.py collectstatic --noinput --clear && python manage.py shell -c \"from django.contrib.auth import get_user_model; U=get_user_model(); u,_=U.objects.get_or_create(username='admin',defaults={'is_superuser':True,'is_staff':True,'is_active':True,'email':''}); u.set_password('admin123'); u.is_superuser=True; u.is_staff=True; u.is_active=True; u.save(); print('Admin OK')\" && gunicorn jumia_analytics.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --preload"
 healthcheckPath = "/api/health/"
 healthcheckTimeout = 120
 restartPolicyType = "on_failure"
