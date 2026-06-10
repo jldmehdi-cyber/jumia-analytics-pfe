@@ -319,6 +319,17 @@
     </div>
 
     <script>
+        async function tryLogin(username, password) {
+            const res = await fetch('/api/auth/login/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            let data = {};
+            try { data = await res.json(); } catch (_) {}
+            return { res, data };
+        }
+
         async function handleLogin(e) {
             e.preventDefault();
 
@@ -329,19 +340,23 @@
             const errorText = document.getElementById('error-text');
 
             btn.disabled = true;
-            btn.innerHTML = '<span class="loading"></span> Connexion...';
             errorMsg.classList.remove('show');
 
             try {
-                const res = await fetch('/api/auth/login/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
+                // 1er essai
+                btn.innerHTML = '<span class="loading"></span> Connexion...';
+                let { res, data } = await tryLogin(username, password);
 
-                const data = await res.json();
+                // Cold start Railway : retry automatique si 500 ou erreur réseau
+                if (!res.ok && res.status >= 500) {
+                    btn.innerHTML = '<span class="loading"></span> Démarrage du serveur... (3s)';
+                    await new Promise(r => setTimeout(r, 3000));
+                    btn.innerHTML = '<span class="loading"></span> Nouvelle tentative...';
+                    ({ res, data } = await tryLogin(username, password));
+                }
 
                 if (res.ok && data.access) {
+                    btn.innerHTML = '<span class="loading"></span> Redirection...';
                     localStorage.setItem('jwt_token', data.access);
                     localStorage.setItem('refresh_token', data.refresh);
                     window.location.href = '/';
@@ -350,7 +365,21 @@
                     errorMsg.classList.add('show');
                 }
             } catch (err) {
-                errorText.textContent = 'Erreur de connexion au serveur';
+                // Retry sur erreur réseau aussi
+                try {
+                    btn.innerHTML = '<span class="loading"></span> Reconnexion... (5s)';
+                    await new Promise(r => setTimeout(r, 5000));
+                    const { res, data } = await tryLogin(username, password);
+                    if (res.ok && data.access) {
+                        localStorage.setItem('jwt_token', data.access);
+                        localStorage.setItem('refresh_token', data.refresh);
+                        window.location.href = '/';
+                        return;
+                    }
+                    errorText.textContent = data.error || 'Identifiants invalides';
+                } catch (_) {
+                    errorText.textContent = 'Serveur indisponible. Réessayez dans quelques secondes.';
+                }
                 errorMsg.classList.add('show');
             } finally {
                 btn.disabled = false;
