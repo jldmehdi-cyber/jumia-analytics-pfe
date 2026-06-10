@@ -73,7 +73,10 @@ WSGI_APPLICATION = 'jumia_analytics.wsgi.application'
 # Priorité : DATABASE_URL > variables DB_* individuelles > SQLite
 if os.environ.get('DATABASE_URL'):
     import dj_database_url
-    DATABASES = {'default': dj_database_url.config(conn_max_age=600)}
+    DATABASES = {'default': dj_database_url.config(
+        conn_max_age=0,           # Ne pas réutiliser les connexions (évite SSL EOF)
+        conn_health_checks=True,  # Vérifier la connexion avant chaque requête
+    )}
 elif os.environ.get('USE_SQLITE', 'True') != 'True':
     DATABASES = {
         'default': {
