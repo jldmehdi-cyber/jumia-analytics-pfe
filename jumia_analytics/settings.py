@@ -70,8 +70,8 @@ TEMPLATES = [
 WSGI_APPLICATION = 'jumia_analytics.wsgi.application'
 
 # Base de données
-# Priorité : DATABASE_URL > NEON_DATABASE_URL > variables DB_* > SQLite
-_db_url = os.environ.get('DATABASE_URL') or os.environ.get('NEON_DATABASE_URL')
+# Priorité : NEON_DATABASE_URL > DATABASE_URL > variables DB_* > SQLite
+_db_url = os.environ.get('NEON_DATABASE_URL') or os.environ.get('DATABASE_URL')
 if _db_url:
     import dj_database_url
     DATABASES = {'default': dj_database_url.parse(
