@@ -1566,7 +1566,7 @@ async function loadCustomKPIs() {
 
     const fmtKpi = (val, type) => {
         if (val === null || val === undefined) return '—';
-        if (type === 'montant')     return new Intl.NumberFormat('fr-DZ', { maximumFractionDigits: 0 }).format(val) + ' DZD';
+        if (type === 'montant')     return new Intl.NumberFormat('fr-MA', { maximumFractionDigits: 0 }).format(val) + ' MAD';
         if (type === 'pourcentage') return parseFloat(val).toFixed(2) + ' %';
         return parseFloat(val).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
     };

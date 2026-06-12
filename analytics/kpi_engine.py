@@ -297,7 +297,7 @@ class KPIEngine:
                 'Code du commercial',
                 'Nom du commercial',
                 'Quantité vendue',
-                'Prix unitaire en DZD',
+                'Prix unitaire en MAD',
                 'Taux de remise en %'
             ] + ['Champ personnalisé'] * (len(colonnes) - 12)
         })

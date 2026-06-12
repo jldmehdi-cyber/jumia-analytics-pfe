@@ -756,7 +756,7 @@
                     <div class="form-group">
                         <label>Format d'affichage *</label>
                         <select id="ind-type-aff">
-                            <option value="montant">Montant (DZD)</option>
+                            <option value="montant">Montant (MAD)</option>
                             <option value="nombre">Nombre entier</option>
                             <option value="pourcentage">Pourcentage (%)</option>
                             <option value="duree">Durée (jours)</option>
@@ -922,7 +922,7 @@
                 somme:'Somme', moyenne:'Moyenne', compte:'Compte distinct',
                 min:'Minimum', max:'Maximum', ratio:'Ratio', formule:'Formule'
             };
-            const AFF_LABELS = { montant:'DZD', nombre:'Nombre', pourcentage:'%', duree:'jours' };
+            const AFF_LABELS = { montant:'MAD', nombre:'Nombre', pourcentage:'%', duree:'jours' };
 
             container.innerHTML = data.map(ind => `
                 <div class="indicateur-item">
@@ -1126,7 +1126,7 @@
 
         function formatValue(val, type) {
             if (val === null || val === undefined) return '—';
-            if (type === 'montant')     return new Intl.NumberFormat('fr-DZ', { style:'currency', currency:'DZD', maximumFractionDigits:0 }).format(val);
+            if (type === 'montant')     return new Intl.NumberFormat('fr-MA', { maximumFractionDigits:0 }).format(val) + ' MAD';
             if (type === 'pourcentage') return parseFloat(val).toFixed(2) + ' %';
             return parseFloat(val).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
         }

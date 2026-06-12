@@ -290,7 +290,7 @@ class IndicateurPersonnalise(models.Model):
 
     TYPES_AFFICHAGE = [
         ('nombre', 'Nombre'),
-        ('montant', 'Montant (DZD)'),
+        ('montant', 'Montant (MAD)'),
         ('pourcentage', 'Pourcentage'),
         ('duree', 'Durée (jours)'),
         ('texte', 'Texte'),
