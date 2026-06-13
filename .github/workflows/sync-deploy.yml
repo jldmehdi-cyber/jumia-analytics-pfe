@@ -1,0 +1,32 @@
+name: Sync Railway on push
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  railway-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Sync GROQ_API_KEY to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway variables set GROQ_API_KEY="${{ secrets.GROQ_API_KEY }}" \
+            --service 79075ddd-ae79-43bc-9a61-e6c7efa27279 \
+            --environment 5cab2441-397d-438d-b234-b02d194aea2d
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway up \
+            --service 79075ddd-ae79-43bc-9a61-e6c7efa27279 \
+            --environment 5cab2441-397d-438d-b234-b02d194aea2d \
+            --detach
