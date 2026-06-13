@@ -150,10 +150,11 @@ class KPIEngine:
         marge_total = qs.aggregate(r=Sum('marge_ligne'))['r'] or 0
         nb_cmd = qs.aggregate(r=Count('id_donnee', distinct=True))['r'] or 0
         qte_total = qs.aggregate(r=Sum('quantite'))['r'] or 0
-        total_clients = qs.values('code_client').distinct().count()
-        clients_recurrents = qs.values('code_client').annotate(nb=Count('id_donnee')).filter(nb__gt=1).count()
-        clients_un_achat = total_clients - clients_recurrents
-        taux_abandon_proxy = round(clients_un_achat / total_clients * 100, 2) if total_clients else 0
+        counts = list(qs.values('code_client').annotate(nb=Count('id_donnee')).values_list('nb', flat=True))
+        total_clients = len(counts)
+        clients_un_achat = sum(1 for n in counts if n == 1)
+        clients_recurrents = total_clients - clients_un_achat
+        taux_abandon = round(clients_un_achat / total_clients * 100, 2) if total_clients else 0
 
         context = {
             'ca': float(ca_total),
@@ -164,7 +165,7 @@ class KPIEngine:
             'total_clients': float(total_clients),
             'clients_recurrents': float(clients_recurrents),
             'clients_un_achat': float(clients_un_achat),
-            'taux_abandon': taux_abandon_proxy,
+            'taux_abandon': taux_abandon,
             'round': round, 'abs': abs, 'max': max, 'min': min,
         }
 

@@ -1908,23 +1908,36 @@ def api_colonnes_disponibles(request):
     })
 
 
+def _calculer_taux_abandon(qs):
+    """Retourne le % de clients n'ayant qu'une seule transaction (non-fidélisés)."""
+    counts = list(
+        qs.values('code_client')
+          .annotate(nb=Count('id_donnee'))
+          .values_list('nb', flat=True)
+    )
+    total = len(counts)
+    if not total:
+        return 0.0
+    un_achat = sum(1 for n in counts if n == 1)
+    return round(un_achat / total * 100, 2)
+
+
 def _eval_formule_kpi(formule, qs):
     ca = float(qs.aggregate(r=Sum('ca_ligne'))['r'] or 0)
     marge = float(qs.aggregate(r=Sum('marge_ligne'))['r'] or 0)
     nb = qs.aggregate(r=Count('id_donnee'))['r'] or 0
     qte = float(qs.aggregate(r=Sum('quantite'))['r'] or 0)
-    # Proxy taux d'abandon : clients n'ayant qu'une seule transaction (non-fidélisés)
+    taux_abandon = _calculer_taux_abandon(qs)
     total_clients = qs.values('code_client').distinct().count()
-    clients_recurrents = qs.values('code_client').annotate(nb=Count('id_donnee')).filter(nb__gt=1).count()
-    clients_un_achat = total_clients - clients_recurrents
-    taux_abandon_proxy = round(clients_un_achat / total_clients * 100, 2) if total_clients else 0
+    clients_un_achat = round(taux_abandon * total_clients / 100)
+    clients_recurrents = total_clients - clients_un_achat
     ctx = {
         'ca': ca, 'marge': marge, 'nb_commandes': float(nb),
         'quantite': qte, 'panier_moyen': ca / nb if nb else 0,
         'total_clients': float(total_clients),
         'clients_recurrents': float(clients_recurrents),
         'clients_un_achat': float(clients_un_achat),
-        'taux_abandon': taux_abandon_proxy,
+        'taux_abandon': taux_abandon,
         'round': round, 'abs': abs, 'max': max, 'min': min,
     }
     try:
