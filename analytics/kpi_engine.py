@@ -74,13 +74,10 @@ class KPIEngine:
 
     def _get_queryset_base(self, indicateur, filtres):
         """Construit le queryset de base avec les filtres"""
-        # Déterminer la source de données
-        if indicateur.table_source == 'donnee_brute' and self.config:
+        if self.config:
             qs = DonneeBrute.objects.filter(config=self.config)
         else:
-            # Fallback sur les tables de fait standard
-            from .models import LigneCommande
-            qs = LigneCommande.objects.all()
+            qs = DonneeBrute.objects.filter(config__created_by=indicateur.created_by)
 
         # Appliquer les filtres
         if filtres.get('region'):
@@ -149,23 +146,27 @@ class KPIEngine:
         if not formule:
             return 0
 
-        # Récupérer les agrégations de base pour la formule
+        from .models import EvenementComportemental
         ca_total = qs.aggregate(r=Sum('ca_ligne'))['r'] or 0
         marge_total = qs.aggregate(r=Sum('marge_ligne'))['r'] or 0
         nb_cmd = qs.aggregate(r=Count('id_donnee', distinct=True))['r'] or 0
         qte_total = qs.aggregate(r=Sum('quantite'))['r'] or 0
+        nb_abandons = EvenementComportemental.objects.filter(type_evenement='abandon_panier').count()
+        nb_ajouts = EvenementComportemental.objects.filter(type_evenement='ajout_panier').count()
 
-        # Contexte sécurisé pour eval
         context = {
             'ca': float(ca_total),
             'marge': float(marge_total),
             'nb_commandes': float(nb_cmd),
             'quantite': float(qte_total),
             'panier_moyen': float(ca_total) / float(nb_cmd) if nb_cmd else 0,
+            'nb_abandons': float(nb_abandons),
+            'nb_ajouts_panier': float(nb_ajouts),
+            'taux_abandon': round(nb_abandons / nb_ajouts * 100, 2) if nb_ajouts else 0,
+            'round': round, 'abs': abs, 'max': max, 'min': min,
         }
 
         try:
-            # Évaluation sécurisée (whitelist de fonctions)
             result = eval(formule, {"__builtins__": {}}, context)
             return result
         except Exception as e:

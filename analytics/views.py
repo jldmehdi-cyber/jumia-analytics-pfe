@@ -1913,9 +1913,14 @@ def _eval_formule_kpi(formule, qs):
     marge = float(qs.aggregate(r=Sum('marge_ligne'))['r'] or 0)
     nb = qs.aggregate(r=Count('id_donnee'))['r'] or 0
     qte = float(qs.aggregate(r=Sum('quantite'))['r'] or 0)
+    nb_abandons = EvenementComportemental.objects.filter(type_evenement='abandon_panier').count()
+    nb_ajouts = EvenementComportemental.objects.filter(type_evenement='ajout_panier').count()
     ctx = {
         'ca': ca, 'marge': marge, 'nb_commandes': float(nb),
         'quantite': qte, 'panier_moyen': ca / nb if nb else 0,
+        'nb_abandons': float(nb_abandons),
+        'nb_ajouts_panier': float(nb_ajouts),
+        'taux_abandon': round(nb_abandons / nb_ajouts * 100, 2) if nb_ajouts else 0,
         'round': round, 'abs': abs, 'max': max, 'min': min,
     }
     try:
