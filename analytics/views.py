@@ -707,131 +707,189 @@ def api_rfm(request):
 @permission_classes([IsAuthenticated])
 def api_chatbot(request):
     """
-    Chatbot analytique basé sur des règles — répond aux questions sur les KPIs.
+    Assistant analytique intelligent — Claude API avec contexte DB réel.
+    Fallback automatique sur réponses règles si ANTHROPIC_API_KEY absent.
     """
-    message = request.data.get('message', '').lower().strip()
+    message_original = request.data.get('message', '').strip()
+    message = message_original.lower()
     config_id = request.data.get('config_id')
 
     qs = DonneeBrute.objects.all()
     if config_id:
         qs = qs.filter(config_id=config_id)
 
-    # Détection d'intention par mots-clés
+    # ── Collecte du contexte réel depuis la base ──────────────────────────
+    try:
+        stats = qs.aggregate(
+            ca=Sum('ca_ligne'), marge=Sum('marge_ligne'),
+            nb=Count('id_donnee'), nb_clt=Count('code_client', distinct=True)
+        )
+        ca      = float(stats['ca']    or 0)
+        marge   = float(stats['marge'] or 0)
+        nb      = stats['nb']    or 0
+        nb_clt  = stats['nb_clt'] or 0
+        panier  = round(ca / nb, 0) if nb else 0
+        taux_marge = round(marge / ca * 100, 1) if ca else 0
+
+        top_regions = list(
+            qs.values('region').annotate(ca=Sum('ca_ligne')).order_by('-ca')[:5]
+        )
+        top_articles = list(
+            qs.values('nom_article', 'code_article')
+              .annotate(ca=Sum('ca_ligne'), qte=Sum('quantite'))
+              .order_by('-ca')[:5]
+        )
+        top_commerciaux = list(
+            qs.values('nom_commercial', 'code_commercial')
+              .annotate(ca=Sum('ca_ligne'))
+              .order_by('-ca')[:5]
+        )
+        top_categories = list(
+            qs.values('categorie').annotate(ca=Sum('ca_ligne')).order_by('-ca')[:5]
+        )
+        # Évolution mensuelle (6 derniers mois)
+        evolution = list(
+            qs.annotate(mois=TruncMonth('date_commande'))
+              .values('mois').annotate(ca=Sum('ca_ligne'))
+              .order_by('-mois')[:6]
+        )
+        evolution.reverse()
+
+    except Exception as e:
+        return Response({'response': f"Erreur base de données : {e}", 'intent': 'error', 'confidence': 0})
+
+    # ── Tentative d'appel Claude API ─────────────────────────────────────
+    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    if api_key:
+        try:
+            import anthropic
+
+            # Construction du contexte données
+            regions_txt = '\n'.join(
+                f"  • {r['region']}: {float(r['ca']):,.0f} MAD" for r in top_regions
+            ) or "  Aucune donnée"
+            articles_txt = '\n'.join(
+                f"  • {a['nom_article'] or a['code_article']}: {float(a['ca']):,.0f} MAD ({int(a['qte'] or 0)} unités)"
+                for a in top_articles
+            ) or "  Aucune donnée"
+            commerciaux_txt = '\n'.join(
+                f"  • {c['nom_commercial'] or c['code_commercial']}: {float(c['ca']):,.0f} MAD"
+                for c in top_commerciaux
+            ) or "  Aucune donnée"
+            categories_txt = '\n'.join(
+                f"  • {c['categorie']}: {float(c['ca']):,.0f} MAD" for c in top_categories
+            ) or "  Aucune donnée"
+            evolution_txt = '\n'.join(
+                f"  • {e['mois'].strftime('%B %Y') if e['mois'] else '?'}: {float(e['ca']):,.0f} MAD"
+                for e in evolution
+            ) or "  Aucune donnée"
+
+            contexte = f"""=== DONNÉES RÉELLES DE LA BASE JUMIA ANALYTICS ===
+
+INDICATEURS GLOBAUX :
+  • Chiffre d'affaires total : {ca:,.0f} MAD
+  • Marge totale : {marge:,.0f} MAD ({taux_marge}% du CA)
+  • Nombre de transactions : {nb:,}
+  • Clients actifs : {nb_clt:,}
+  • Panier moyen : {panier:,.0f} MAD
+
+TOP 5 RÉGIONS par CA :
+{regions_txt}
+
+TOP 5 PRODUITS par CA :
+{articles_txt}
+
+TOP 5 COMMERCIAUX par CA :
+{commerciaux_txt}
+
+TOP 5 CATÉGORIES par CA :
+{categories_txt}
+
+ÉVOLUTION MENSUELLE (6 derniers mois) :
+{evolution_txt}
+=== FIN DES DONNÉES ==="""
+
+            client = anthropic.Anthropic(api_key=api_key)
+            resp = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=600,
+                system=(
+                    "Tu es un assistant analytique expert intégré dans Jumia Analytics, "
+                    "une plateforme d'analyse commerciale marocaine. "
+                    "Tu as accès aux données réelles de l'entreprise fournies dans chaque message. "
+                    "Réponds TOUJOURS en français, de façon concise, précise et professionnelle. "
+                    "Utilise les chiffres exacts des données. Formule des observations pertinentes "
+                    "et des recommandations actionnables quand c'est utile. "
+                    "Ne dis jamais que tu n'as pas accès aux données."
+                ),
+                messages=[{
+                    "role": "user",
+                    "content": f"{contexte}\n\nQuestion : {message_original}"
+                }]
+            )
+            reponse = resp.content[0].text
+            return Response({
+                'response': reponse,
+                'intent': 'claude_ai',
+                'confidence': 1.0,
+                'message_original': message_original,
+                'powered_by': 'claude-haiku'
+            })
+
+        except Exception as e:
+            # Erreur API → fallback règles
+            pass
+
+    # ── Fallback : réponses par règles (si pas de clé API) ───────────────
     def detecter_intention(msg):
         if any(w in msg for w in ['ca', "chiffre d'affaires", 'chiffre affaire', 'revenu', 'vente', 'total']):
             return 'ca_total'
         if any(w in msg for w in ['marge', 'profit', 'benefice', 'bénéfice']):
             return 'marge'
-        if any(w in msg for w in ['client', 'acheteur', 'nombre de client']):
+        if any(w in msg for w in ['client', 'acheteur']):
             return 'clients'
-        if any(w in msg for w in ['region', 'région', 'zone', 'territoire', 'meilleure']):
+        if any(w in msg for w in ['region', 'région', 'zone', 'territoire']):
             return 'region'
-        if any(w in msg for w in ['article', 'produit', 'top', 'best', 'meilleur produit']):
+        if any(w in msg for w in ['article', 'produit', 'top']):
             return 'article'
         if any(w in msg for w in ['commercial', 'vendeur', 'agent']):
             return 'commercial'
-        if any(w in msg for w in ['prevision', 'prévision', 'forecast', 'futur', 'prochain']):
-            return 'prevision'
-        if any(w in msg for w in ['commande', 'transaction', 'achat', 'nombre']):
-            return 'commandes'
-        if any(w in msg for w in ['panier', 'moyen', 'average']):
+        if any(w in msg for w in ['panier', 'moyen']):
             return 'panier_moyen'
         if any(w in msg for w in ['bonjour', 'salut', 'hello', 'bonsoir']):
             return 'salutation'
-        if any(w in msg for w in ['aide', 'help', 'que peux', 'quoi faire', 'question']):
-            return 'aide'
         return 'fallback'
 
     intention = detecter_intention(message)
-    reponse = ''
-    confidence = 0.9
-
-    try:
-        from django.db.models import Sum, Count, Avg, Max
-        stats = qs.aggregate(
-            ca=Sum('ca_ligne'), marge=Sum('marge_ligne'),
-            nb=Count('id_donnee'), nb_clt=Count('code_client', distinct=True)
-        )
-        ca = float(stats['ca'] or 0)
-        marge = float(stats['marge'] or 0)
-        nb = stats['nb'] or 0
-        nb_clt = stats['nb_clt'] or 0
-
-        if intention == 'salutation':
-            reponse = "Bonjour ! Je suis l'assistant analytique de Jumia Analytics. Posez-moi des questions sur votre chiffre d'affaires, vos clients, vos régions, vos produits ou vos prévisions !"
-            confidence = 1.0
-
-        elif intention == 'aide':
-            reponse = ("Je peux répondre à des questions comme :\n"
-                      "• Quel est le CA total ?\n"
-                      "• Quelle est la meilleure région ?\n"
-                      "• Quel est le top produit ?\n"
-                      "• Combien de clients actifs ?\n"
-                      "• Quelle est la marge globale ?\n"
-                      "• Quel est le panier moyen ?\n"
-                      "• Quel commercial performe le mieux ?")
-            confidence = 1.0
-
-        elif intention == 'ca_total':
-            reponse = f"Le chiffre d'affaires total est de {ca:,.0f} MAD, généré sur {nb} transactions."
-
-        elif intention == 'marge':
-            taux = round(marge / ca * 100, 1) if ca else 0
-            reponse = f"La marge totale est de {marge:,.0f} MAD, soit {taux}% du CA ({ca:,.0f} MAD)."
-
-        elif intention == 'clients':
-            panier = round(ca / nb, 0) if nb else 0
-            reponse = f"Vous avez {nb_clt} client(s) actif(s), avec un panier moyen de {panier:,.0f} MAD."
-
-        elif intention == 'region':
-            top_region = (qs.values('region').annotate(ca=Sum('ca_ligne')).order_by('-ca').first())
-            if top_region:
-                reponse = f"La meilleure région est {top_region['region']} avec {float(top_region['ca']):,.0f} MAD de CA."
-            else:
-                reponse = "Aucune donnée par région disponible."
-
-        elif intention == 'article':
-            top_art = (qs.values('nom_article', 'code_article').annotate(ca=Sum('ca_ligne')).order_by('-ca').first())
-            if top_art:
-                reponse = f"Le meilleur produit est '{top_art['nom_article'] or top_art['code_article']}' avec {float(top_art['ca']):,.0f} MAD de CA."
-            else:
-                reponse = "Aucune donnée produit disponible."
-
-        elif intention == 'commercial':
-            top_comm = (qs.values('nom_commercial', 'code_commercial').annotate(ca=Sum('ca_ligne')).order_by('-ca').first())
-            if top_comm:
-                reponse = f"Le meilleur commercial est '{top_comm['nom_commercial'] or top_comm['code_commercial']}' avec {float(top_comm['ca']):,.0f} MAD de CA."
-            else:
-                reponse = "Aucune donnée commerciale disponible."
-
-        elif intention == 'commandes':
-            reponse = f"Il y a {nb} transaction(s) enregistrée(s) dans la base de données."
-
-        elif intention == 'panier_moyen':
-            panier = round(ca / nb, 2) if nb else 0
-            reponse = f"Le panier moyen est de {panier:,.0f} MAD par transaction ({nb} transactions pour {ca:,.0f} MAD de CA)."
-
-        elif intention == 'prevision':
-            reponse = ("Pour consulter les prévisions sur 3 mois, rendez-vous dans l'onglet "
-                      "'Prévisions ML' du dashboard. Les prévisions utilisent une régression "
-                      "linéaire avec ajustement saisonnier sur l'historique complet.")
-            confidence = 0.8
-
-        else:
-            confidence = 0.3
-            reponse = (f"Je n'ai pas bien compris votre question. "
-                      f"Vous pouvez me demander le CA total ({ca:,.0f} MAD), "
-                      f"le nombre de clients ({nb_clt}), ou les meilleures régions/produits.")
-
-    except Exception as e:
-        reponse = f"Erreur lors du traitement : {str(e)}"
-        confidence = 0.0
+    if intention == 'salutation':
+        reponse = "Bonjour ! Je suis l'assistant analytique Jumia Analytics. Posez-moi n'importe quelle question sur vos données commerciales !"
+    elif intention == 'ca_total':
+        reponse = f"Le chiffre d'affaires total est de {ca:,.0f} MAD sur {nb:,} transactions."
+    elif intention == 'marge':
+        reponse = f"La marge totale est de {marge:,.0f} MAD ({taux_marge}% du CA de {ca:,.0f} MAD)."
+    elif intention == 'clients':
+        reponse = f"Vous avez {nb_clt:,} client(s) actif(s), panier moyen : {panier:,.0f} MAD."
+    elif intention == 'region':
+        r = top_regions[0] if top_regions else None
+        reponse = f"Meilleure région : {r['region']} ({float(r['ca']):,.0f} MAD)." if r else "Aucune donnée région."
+    elif intention == 'article':
+        a = top_articles[0] if top_articles else None
+        reponse = f"Top produit : '{a['nom_article'] or a['code_article']}' ({float(a['ca']):,.0f} MAD)." if a else "Aucune donnée produit."
+    elif intention == 'commercial':
+        c = top_commerciaux[0] if top_commerciaux else None
+        reponse = f"Meilleur commercial : '{c['nom_commercial'] or c['code_commercial']}' ({float(c['ca']):,.0f} MAD)." if c else "Aucune donnée."
+    elif intention == 'panier_moyen':
+        reponse = f"Panier moyen : {panier:,.0f} MAD ({nb:,} transactions, CA {ca:,.0f} MAD)."
+    else:
+        reponse = f"CA : {ca:,.0f} MAD | Marge : {taux_marge}% | Clients : {nb_clt:,} | Panier : {panier:,.0f} MAD. Posez une question plus précise !"
+        intention = 'fallback'
 
     return Response({
         'response': reponse,
         'intent': intention,
-        'confidence': confidence,
-        'message_original': message,
+        'confidence': 0.8,
+        'message_original': message_original,
+        'powered_by': 'rules'
     })
 
 @api_view(['GET'])
