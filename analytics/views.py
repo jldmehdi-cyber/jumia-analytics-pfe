@@ -811,7 +811,7 @@ TOP 5 CATÉGORIES par CA :
 
             client = Groq(api_key=api_key)
             resp = client.chat.completions.create(
-                model="llama-3.1-70b-versatile",
+                model="llama-3.3-70b-versatile",
                 max_tokens=600,
                 messages=[
                     {
@@ -842,8 +842,16 @@ TOP 5 CATÉGORIES par CA :
             })
 
         except Exception as e:
-            # Erreur API → fallback règles
-            pass
+            # Erreur API → fallback règles (log pour debug)
+            logger = __import__('logging').getLogger('analytics')
+            logger.error(f"Groq API error: {e}")
+            # Retourner l'erreur directement pour faciliter le debug
+            return Response({
+                'response': f"⚠️ Erreur assistant IA : {str(e)[:200]}. Contactez l'administrateur.",
+                'intent': 'error',
+                'confidence': 0,
+                'powered_by': 'error'
+            })
 
     # ── Fallback : réponses par règles (si pas de clé API) ───────────────
     def detecter_intention(msg):
