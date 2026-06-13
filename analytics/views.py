@@ -758,11 +758,11 @@ def api_chatbot(request):
     except Exception as e:
         return Response({'response': f"Erreur base de données : {e}", 'intent': 'error', 'confidence': 0})
 
-    # ── Tentative d'appel Claude API ─────────────────────────────────────
-    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    # ── Tentative d'appel Groq API (Llama 3.1 70B) ──────────────────────
+    api_key = os.environ.get('GROQ_API_KEY', '')
     if api_key:
         try:
-            import anthropic
+            from groq import Groq
 
             # Construction du contexte données
             regions_txt = '\n'.join(
@@ -809,31 +809,36 @@ TOP 5 CATÉGORIES par CA :
 {evolution_txt}
 === FIN DES DONNÉES ==="""
 
-            client = anthropic.Anthropic(api_key=api_key)
-            resp = client.messages.create(
-                model="claude-haiku-4-5-20251001",
+            client = Groq(api_key=api_key)
+            resp = client.chat.completions.create(
+                model="llama-3.1-70b-versatile",
                 max_tokens=600,
-                system=(
-                    "Tu es un assistant analytique expert intégré dans Jumia Analytics, "
-                    "une plateforme d'analyse commerciale marocaine. "
-                    "Tu as accès aux données réelles de l'entreprise fournies dans chaque message. "
-                    "Réponds TOUJOURS en français, de façon concise, précise et professionnelle. "
-                    "Utilise les chiffres exacts des données. Formule des observations pertinentes "
-                    "et des recommandations actionnables quand c'est utile. "
-                    "Ne dis jamais que tu n'as pas accès aux données."
-                ),
-                messages=[{
-                    "role": "user",
-                    "content": f"{contexte}\n\nQuestion : {message_original}"
-                }]
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "Tu es un assistant analytique expert intégré dans Jumia Analytics, "
+                            "une plateforme d'analyse commerciale marocaine. "
+                            "Tu as accès aux données réelles de l'entreprise fournies dans chaque message. "
+                            "Réponds TOUJOURS en français, de façon concise, précise et professionnelle. "
+                            "Utilise les chiffres exacts des données. Formule des observations pertinentes "
+                            "et des recommandations actionnables quand c'est utile. "
+                            "Ne dis jamais que tu n'as pas accès aux données."
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": f"{contexte}\n\nQuestion : {message_original}"
+                    }
+                ]
             )
-            reponse = resp.content[0].text
+            reponse = resp.choices[0].message.content
             return Response({
                 'response': reponse,
-                'intent': 'claude_ai',
+                'intent': 'groq_ai',
                 'confidence': 1.0,
                 'message_original': message_original,
-                'powered_by': 'claude-haiku'
+                'powered_by': 'llama-3.1-70b'
             })
 
         except Exception as e:
