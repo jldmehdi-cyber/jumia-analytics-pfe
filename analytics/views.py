@@ -749,7 +749,7 @@ def api_chatbot(request):
         )
         # Évolution mensuelle (6 derniers mois)
         evolution = list(
-            qs.annotate(mois=TruncMonth('date_commande'))
+            qs.annotate(mois=TruncMonth('date_transaction'))
               .values('mois').annotate(ca=Sum('ca_ligne'))
               .order_by('-mois')[:6]
         )
