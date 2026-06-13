@@ -1097,7 +1097,7 @@
                 'nb_clients':   { nom:'Nombre de Clients',        type_calcul:'compte',  champ_source:'code_client', type_affichage:'nombre',      icone:'fa-users',           description:'Compte distinct des clients' },
                 'taux_marge':   { nom:'Taux de Marge',            type_calcul:'formule', champ_source:'',            type_affichage:'pourcentage', icone:'fa-percentage',      description:'Marge / CA × 100', formule:'marge / ca * 100 if ca else 0' },
                 'nb_articles':          { nom:"Nombre d'Articles vendus",    type_calcul:'somme',   champ_source:'quantite',    type_affichage:'nombre',      icone:'fa-box',          description:'Total des quantités vendues' },
-                'taux_abandon_panier':  { nom:"Taux d'Abandon du Panier",    type_calcul:'formule', champ_source:'',            type_affichage:'pourcentage', icone:'fa-shopping-cart', description:'Abandons panier / Ajouts panier × 100 (nécessite le suivi comportemental)', formule:'taux_abandon' },
+                'taux_abandon_panier':  { nom:"Taux d'Abandon du Panier",    type_calcul:'formule', champ_source:'',            type_affichage:'pourcentage', icone:'fa-shopping-cart', description:'% de clients ayant effectué un seul achat (non-fidélisés)', formule:'taux_abandon' },
             };
 
             const p = presets[type];

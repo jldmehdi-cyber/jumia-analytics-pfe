@@ -1913,14 +1913,18 @@ def _eval_formule_kpi(formule, qs):
     marge = float(qs.aggregate(r=Sum('marge_ligne'))['r'] or 0)
     nb = qs.aggregate(r=Count('id_donnee'))['r'] or 0
     qte = float(qs.aggregate(r=Sum('quantite'))['r'] or 0)
-    nb_abandons = EvenementComportemental.objects.filter(type_evenement='abandon_panier').count()
-    nb_ajouts = EvenementComportemental.objects.filter(type_evenement='ajout_panier').count()
+    # Proxy taux d'abandon : clients n'ayant qu'une seule transaction (non-fidélisés)
+    total_clients = qs.values('code_client').distinct().count()
+    clients_recurrents = qs.values('code_client').annotate(nb=Count('id_donnee')).filter(nb__gt=1).count()
+    clients_un_achat = total_clients - clients_recurrents
+    taux_abandon_proxy = round(clients_un_achat / total_clients * 100, 2) if total_clients else 0
     ctx = {
         'ca': ca, 'marge': marge, 'nb_commandes': float(nb),
         'quantite': qte, 'panier_moyen': ca / nb if nb else 0,
-        'nb_abandons': float(nb_abandons),
-        'nb_ajouts_panier': float(nb_ajouts),
-        'taux_abandon': round(nb_abandons / nb_ajouts * 100, 2) if nb_ajouts else 0,
+        'total_clients': float(total_clients),
+        'clients_recurrents': float(clients_recurrents),
+        'clients_un_achat': float(clients_un_achat),
+        'taux_abandon': taux_abandon_proxy,
         'round': round, 'abs': abs, 'max': max, 'min': min,
     }
     try:
