@@ -1281,10 +1281,19 @@
         <!-- Colonnes personnalisées -->
         <div class="cb-step-label"><i class="fas fa-plus-circle" style="color:var(--cyan)"></i> Colonnes personnalisées</div>
         <div id="cb-perso-list"></div>
-        <button class="btn btn-ghost" style="font-size:12px;padding:6px 13px;margin-bottom:16px"
-                onclick="cbAddPerso()">
-          <i class="fas fa-plus"></i> Ajouter une colonne personnalisée
-        </button>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+          <button class="btn btn-ghost" style="font-size:12px;padding:6px 13px"
+                  onclick="cbAddPerso()">
+            <i class="fas fa-plus"></i> Ajouter une colonne personnalisée
+          </button>
+          <button id="cb-save-btn" class="btn btn-primary" style="font-size:12px;padding:6px 13px;display:none"
+                  onclick="cbSauvegarder()">
+            <i class="fas fa-save"></i> Sauvegarder les colonnes
+          </button>
+          <span id="cb-save-ok" style="font-size:12px;color:var(--success,#22c55e);display:none">
+            <i class="fas fa-check-circle"></i> Sauvegardé
+          </span>
+        </div>
 
         <!-- Aperçu -->
         <div class="cb-step-label"><i class="fas fa-eye" style="color:var(--text3)"></i> Aperçu du canevas</div>
@@ -2039,8 +2048,8 @@ function cbAddPerso(nom='', type='texte') {
     row.className = 'cb-perso-row'; row.id = id;
     row.innerHTML = `
         <input type="text" class="cbp-nom" placeholder="Nom de la colonne" value="${nom}"
-               oninput="cbUpdatePreview(); cbSavePerso()">
-        <select class="cbp-type" onchange="cbUpdatePreview(); cbSavePerso()">
+               oninput="cbUpdatePreview(); cbMarquerNonSauvegarde()">
+        <select class="cbp-type" onchange="cbUpdatePreview(); cbMarquerNonSauvegarde()">
             <option value="texte" ${type==='texte'?'selected':''}>Texte</option>
             <option value="nombre" ${type==='nombre'?'selected':''}>Nombre</option>
             <option value="montant" ${type==='montant'?'selected':''}>Montant</option>
@@ -2052,15 +2061,23 @@ function cbAddPerso(nom='', type='texte') {
         </button>`;
     document.getElementById('cb-perso-list').appendChild(row);
     cbUpdatePreview();
+    cbMarquerNonSauvegarde();
 }
 
 function cbDelPerso(id) {
     document.getElementById(id)?.remove();
     cbUpdatePreview();
-    cbSavePerso();
+    cbMarquerNonSauvegarde();
 }
 
-function cbSavePerso() {
+function cbMarquerNonSauvegarde() {
+    const btn = document.getElementById('cb-save-btn');
+    const ok  = document.getElementById('cb-save-ok');
+    if (btn) btn.style.display = '';
+    if (ok)  ok.style.display  = 'none';
+}
+
+function cbSauvegarder() {
     const cols = [];
     document.querySelectorAll('.cb-perso-row').forEach(row => {
         const nom  = row.querySelector('.cbp-nom').value.trim();
@@ -2068,12 +2085,19 @@ function cbSavePerso() {
         if (nom) cols.push({ nom, type });
     });
     localStorage.setItem('cb_colonnes_perso', JSON.stringify(cols));
+    const btn = document.getElementById('cb-save-btn');
+    const ok  = document.getElementById('cb-save-ok');
+    if (btn) btn.style.display = 'none';
+    if (ok)  { ok.style.display = ''; setTimeout(() => ok.style.display = 'none', 3000); }
 }
 
 function cbLoadPerso() {
     try {
         const saved = JSON.parse(localStorage.getItem('cb_colonnes_perso') || '[]');
         saved.forEach(c => cbAddPerso(c.nom, c.type));
+        // après chargement, pas de modifications en attente
+        const btn = document.getElementById('cb-save-btn');
+        if (btn) btn.style.display = 'none';
     } catch(e) {}
 }
 
