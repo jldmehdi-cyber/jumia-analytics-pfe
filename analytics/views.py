@@ -2004,6 +2004,7 @@ def _config_to_dict(c):
         'description': c.description,
         'theme': c.theme_couleur,
         'created_at': c.created_at.isoformat(),
+        'colonnes_canevas': c.colonnes_canevas or [],
     }
 
 
@@ -2102,6 +2103,8 @@ def api_configuration_detail(request, pk):
         config.nom_projet = request.data.get('nom', config.nom_projet)
         config.description = request.data.get('description', config.description)
         config.theme_couleur = request.data.get('theme', config.theme_couleur)
+        if 'colonnes_canevas' in request.data:
+            config.colonnes_canevas = request.data.get('colonnes_canevas')
         config.save()
         return Response(_config_to_dict(config))
     config.delete()

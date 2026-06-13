@@ -1131,10 +1131,123 @@
             return parseFloat(val).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
         }
 
+        // ─── Canevas : colonnes personnalisées ───
+        let persoCount = 0;
+
+        function ajouterColonnePerso(nom = '', type = 'texte') {
+            persoCount++;
+            const id = `perso-${persoCount}`;
+            const div = document.createElement('div');
+            div.id = id;
+            div.style.cssText = 'display:flex;gap:8px;align-items:center';
+            div.innerHTML = `
+                <input type="text" class="perso-nom" placeholder="Nom de la colonne" value="${nom}"
+                       style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text);font-size:13px"
+                       oninput="updatePreview(); sauvegarderColonnesPerso()">
+                <select class="perso-type"
+                        style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text);font-size:13px"
+                        onchange="updatePreview(); sauvegarderColonnesPerso()">
+                    <option value="texte"      ${type==='texte'      ?'selected':''}>Texte</option>
+                    <option value="nombre"     ${type==='nombre'     ?'selected':''}>Nombre</option>
+                    <option value="montant"    ${type==='montant'    ?'selected':''}>Montant</option>
+                    <option value="date"       ${type==='date'       ?'selected':''}>Date</option>
+                    <option value="pourcentage"${type==='pourcentage'?'selected':''}>%</option>
+                </select>
+                <button onclick="supprimerColonnePerso('${id}')"
+                        style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--text-secondary);cursor:pointer;font-size:13px">
+                    <i class="fas fa-times"></i>
+                </button>`;
+            document.getElementById('colonnes-perso').appendChild(div);
+            document.getElementById('no-perso-msg').style.display = 'none';
+            updatePreview();
+        }
+
+        function supprimerColonnePerso(id) {
+            document.getElementById(id)?.remove();
+            const hasRows = document.querySelectorAll('#colonnes-perso > div').length > 0;
+            document.getElementById('no-perso-msg').style.display = hasRows ? 'none' : '';
+            updatePreview();
+            sauvegarderColonnesPerso();
+        }
+
+        function sauvegarderColonnesPerso() {
+            const cols = [];
+            document.querySelectorAll('#colonnes-perso > div').forEach(row => {
+                const nom  = row.querySelector('.perso-nom').value.trim();
+                const type = row.querySelector('.perso-type').value;
+                if (nom) cols.push({ nom, type });
+            });
+            localStorage.setItem('cfg_colonnes_perso', JSON.stringify(cols));
+        }
+
+        function chargerColonnesPerso() {
+            try {
+                const saved = JSON.parse(localStorage.getItem('cfg_colonnes_perso') || '[]');
+                saved.forEach(c => ajouterColonnePerso(c.nom, c.type));
+            } catch(e) {}
+        }
+
+        // ─── Prévisualisation du canevas ───
+        function updatePreview() {
+            const table = document.getElementById('preview-table');
+            if (!table) return;
+
+            // Colonnes standard cochées
+            const cols = [];
+            // Colonnes verrouillées (toujours présentes)
+            document.querySelectorAll('.col-toggle.locked').forEach(lbl => {
+                const name = lbl.querySelector('.col-name')?.textContent.trim();
+                const type = lbl.querySelector('.col-type-badge')?.textContent.trim() || 'texte';
+                if (name) cols.push({ nom: name, type, locked: true });
+            });
+            // Colonnes optionnelles cochées
+            document.querySelectorAll('.col-toggle:not(.locked)').forEach(lbl => {
+                if (lbl.querySelector('input')?.checked) {
+                    const name = lbl.dataset.col;
+                    const type = lbl.dataset.type || 'texte';
+                    if (name) cols.push({ nom: name, type, locked: false });
+                }
+            });
+            // Colonnes personnalisées
+            document.querySelectorAll('#colonnes-perso > div').forEach(row => {
+                const nom  = row.querySelector('.perso-nom')?.value.trim();
+                const type = row.querySelector('.perso-type')?.value || 'texte';
+                if (nom) cols.push({ nom, type, locked: false, perso: true });
+            });
+
+            const exemples = { texte: 'Texte', nombre: '42', montant: '1 500 MAD', date: '2024-01-15', pourcentage: '12.5 %' };
+
+            const thStyle = 'padding:8px 12px;text-align:left;font-size:12px;white-space:nowrap;border-bottom:2px solid var(--border)';
+            const tdStyle = 'padding:7px 12px;font-size:12px;white-space:nowrap;border-bottom:1px solid var(--border)';
+
+            const ths = cols.map(c => {
+                const color = c.locked ? 'color:#f97316' : c.perso ? 'color:var(--accent)' : '';
+                return `<th style="${thStyle};${color}">${c.nom}</th>`;
+            }).join('');
+
+            const tds = cols.map(c => `<td style="${tdStyle}">${exemples[c.type] || 'Valeur'}</td>`).join('');
+
+            table.innerHTML = `
+                <thead><tr style="background:var(--bg-hover)">${ths}</tr></thead>
+                <tbody><tr>${tds}</tr></tbody>`;
+        }
+
+        // ─── Groupes de colonnes ───
+        function toggleGroupe(groupe) {
+            const body = document.querySelector(`.col-group[data-group="${groupe}"] .col-group-body`);
+            const checkboxes = body?.querySelectorAll('input[type=checkbox]:not([disabled])');
+            if (!checkboxes?.length) return;
+            const allChecked = [...checkboxes].every(cb => cb.checked);
+            checkboxes.forEach(cb => { cb.checked = !allChecked; });
+            updatePreview();
+        }
+
         // Init
         document.addEventListener('DOMContentLoaded', () => {
             loadColonnes();
             loadIndicateurs();
+            chargerColonnesPerso();
+            updatePreview();
         });
     </script>
 </body>
